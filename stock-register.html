@@ -1,0 +1,469 @@
+<title>Pump &amp; Solar Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Deliberately single dark theme, as requested. */
+  :root {
+    color-scheme: dark;
+    --bg: #0a1114;
+    --panel: #111b1f;
+    --panel-2: #16232a;
+    --line: #213239;
+    --line-2: #2c434c;
+    --text: #d5e3e6;
+    --muted: #7f979d;
+    --faint: #536a70;
+    --accent: #4cc6dd;
+    --accent-ink: #062027;
+    --ok: #4fc38c;
+    --warn: #efbd4a;
+    --crit: #ee6a5a;
+    --display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 var(--body);
+    padding-inline: 16px;
+    padding-block: 20px 48px;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0 23px, rgba(76,198,221,.035) 23px 24px),
+      repeating-linear-gradient(90deg, transparent 0 23px, rgba(76,198,221,.035) 23px 24px);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 20px; }
+  .eyebrow { font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+  .led { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); box-shadow: 0 0 0 3px rgba(83,106,112,.2); }
+  .led.live { background: var(--ok); box-shadow: 0 0 0 3px rgba(79,195,140,.18), 0 0 8px var(--ok); }
+  .led.off { background: var(--crit); box-shadow: 0 0 0 3px rgba(238,106,90,.18); }
+  h1 { font: 700 clamp(26px, 4vw, 36px)/1.05 var(--display); letter-spacing: .01em; margin: 8px 0 0; text-wrap: balance; }
+  h1 span { color: var(--muted); font-weight: 500; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); background: var(--panel-2); padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 500; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--crit); border-color: rgba(238,106,90,.4); background: transparent; }
+  .btn.danger.armed { background: var(--crit); color: #1d0703; border-color: var(--crit); }
+
+  /* Summary readouts */
+  .readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--panel); border-radius: 6px; }
+  .readout { padding: 14px 18px; border-left: 1px solid var(--line); display: grid; gap: 4px; }
+  .readout:first-child { border-left: 0; }
+  .readout .k { font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .readout .v { font: 600 26px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+  .readout .s { font: 12px/1.3 var(--mono); color: var(--faint); }
+  .readout.alert .v { color: var(--warn); }
+  .readout.alert.crit .v { color: var(--crit); }
+  @media (max-width: 720px) {
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .readout:nth-child(3) { border-left: 0; }
+    .readout:nth-child(n+3) { border-top: 1px solid var(--line); }
+  }
+
+  /* Controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line-2); background: transparent; border-radius: 3px; padding: 5px 10px; cursor: pointer; font: 500 12px/1.2 var(--mono); color: var(--muted); display: inline-flex; gap: 6px; }
+  .chip b { font-weight: 500; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: rgba(76,198,221,.08); }
+  .chip[aria-pressed="true"] b { color: var(--accent); }
+  .search { display: flex; gap: 8px; align-items: center; flex: 0 1 320px; }
+  .search input, .search select { width: 100%; background: var(--panel); border: 1px solid var(--line-2); border-radius: 4px; padding: 7px 10px; }
+  .search select { width: auto; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  table { width: 100%; border-collapse: collapse; min-width: 880px; }
+  th { text-align: left; font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 12px 14px; border-bottom: 1px solid var(--line-2); background: var(--panel-2); white-space: nowrap; }
+  th.num, td.num { text-align: right; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr { position: relative; }
+  tbody tr:hover td { background: rgba(76,198,221,.03); }
+  td.sev { width: 4px; padding: 0; }
+  td.sev i { display: block; width: 3px; height: 38px; margin-left: 0; border-radius: 0 2px 2px 0; background: var(--ok); }
+  tr.low td.sev i { background: var(--warn); }
+  tr.out td.sev i { background: var(--crit); }
+  .name { font-weight: 600; }
+  .sub { font: 12px/1.4 var(--mono); color: var(--muted); }
+  .sku { color: var(--faint); }
+  .cat { font: 500 12px/1 var(--mono); color: var(--text); white-space: nowrap; }
+  .spec { font: 13px/1.35 var(--mono); white-space: nowrap; }
+  .spec .sub { font-size: 11px; }
+  .loc { font: 12px/1.3 var(--mono); color: var(--muted); }
+
+  .stock { display: grid; grid-template-columns: auto 64px; align-items: center; gap: 4px 10px; justify-content: end; }
+  .qty { display: inline-flex; align-items: center; border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden; }
+  .qty button { width: 26px; height: 28px; border: 0; background: var(--panel-2); cursor: pointer; color: var(--muted); font: 600 15px/1 var(--mono); }
+  .qty button:hover { color: var(--accent); }
+  .qty output { min-width: 44px; text-align: center; font: 600 14px/28px var(--mono); font-variant-numeric: tabular-nums; padding-inline: 4px; }
+  .qty .unit { font: 11px/28px var(--mono); color: var(--faint); padding-right: 6px; }
+  .qty.saving output { color: var(--accent); }
+  .gauge { height: 6px; background: var(--line); border-radius: 1px; position: relative; overflow: hidden; }
+  .gauge span { position: absolute; inset: 0 auto 0 0; background: var(--ok); }
+  tr.low .gauge span { background: var(--warn); }
+  tr.out .gauge span { background: var(--crit); }
+  .gauge em { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text); opacity: .55; }
+  .reorder { grid-column: 1 / -1; text-align: right; font: 11px/1 var(--mono); color: var(--faint); }
+  .pill { display: inline-block; font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 6px; border-radius: 2px; border: 1px solid; white-space: nowrap; }
+  .pill.ok { color: var(--ok); border-color: rgba(79,195,140,.35); }
+  .pill.low { color: var(--warn); border-color: rgba(239,189,74,.4); }
+  .pill.out { color: var(--crit); border-color: rgba(238,106,90,.45); background: rgba(238,106,90,.08); }
+  .val { font: 13px/1.3 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .edit { border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 3px; font: 12px var(--mono); }
+  .edit:hover { color: var(--accent); border-color: var(--line-2); }
+  .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+  .empty strong { display: block; color: var(--text); font: 600 16px var(--display); margin-bottom: 4px; }
+  .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font: 12px var(--mono); color: var(--faint); }
+  .banner { border: 1px solid rgba(239,189,74,.35); background: rgba(239,189,74,.06); color: var(--warn); padding: 10px 14px; border-radius: 4px; font-size: 13px; }
+
+  /* Editor dialog */
+  dialog { border: 1px solid var(--line-2); background: var(--panel); color: var(--text); border-radius: 8px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+  dialog::backdrop { background: rgba(3,8,10,.72); }
+  dialog form { display: grid; gap: 16px; padding: 20px; }
+  dialog h2 { font: 600 20px/1.1 var(--display); margin: 0; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid .full { grid-column: 1 / -1; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+  label { display: grid; gap: 5px; font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  label input, label select, label textarea { background: var(--bg); border: 1px solid var(--line-2); border-radius: 4px; padding: 8px 10px; font: 14px/1.3 var(--body); letter-spacing: 0; text-transform: none; color: var(--text); }
+  label textarea { resize: vertical; min-height: 60px; }
+  .hint { font: 11px/1.3 var(--mono); color: var(--faint); text-transform: none; letter-spacing: 0; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+  .actions .right { display: flex; gap: 8px; }
+  .err { color: var(--crit); font-size: 13px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line-2); padding: 8px 14px; border-radius: 4px; font: 13px var(--mono); }
+  @media (prefers-reduced-motion: no-preference) {
+    .gauge span { transition: width .25s ease; }
+    .toast { transition: opacity .2s; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow"><span class="led" id="led"></span><span id="conn">Connecting to stock data…</span></div>
+      <h1>Pump &amp; Solar Stock <span>/ register</span></h1>
+    </div>
+    <button class="btn primary" id="addBtn" type="button">+ Add item</button>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="readouts" aria-label="Stock summary">
+    <div class="readout"><span class="k">Line items</span><span class="v" id="rItems">–</span><span class="s" id="rItemsS">&nbsp;</span></div>
+    <div class="readout"><span class="k">Units on hand</span><span class="v" id="rUnits">–</span><span class="s" id="rUnitsS">&nbsp;</span></div>
+    <div class="readout"><span class="k">Stock value</span><span class="v" id="rValue">–</span><span class="s">at unit cost, INR</span></div>
+    <div class="readout alert" id="rLowBox"><span class="k">Reorder now</span><span class="v" id="rLow">–</span><span class="s" id="rLowS">&nbsp;</span></div>
+  </section>
+
+  <div class="controls">
+    <div class="chips" id="chips" role="group" aria-label="Filter by category"></div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search name, model, SKU, location" aria-label="Search stock">
+      <select id="stateFilter" aria-label="Filter by stock level">
+        <option value="all">All levels</option>
+        <option value="attn">Low + out</option>
+        <option value="out">Out only</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th aria-label="Stock level"></th>
+          <th>Item</th>
+          <th>Category</th>
+          <th>Rating / supply</th>
+          <th>Location</th>
+          <th class="num">On hand</th>
+          <th>Level</th>
+          <th class="num">Value</th>
+          <th aria-label="Edit"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden></div>
+  </div>
+
+  <div class="foot">
+    <span id="footCount"></span>
+    <span>Gauge tick = reorder level · changes save for everyone with access</span>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form id="form" method="dialog" novalidate>
+    <h2 id="dlgTitle">Add item</h2>
+    <div class="grid">
+      <label class="full">Item name<input id="f-name" required placeholder="Submersible pump 7.5 HP"></label>
+      <label>Category
+        <select id="f-category"></select>
+      </label>
+      <label>SKU / part no.<input id="f-sku" placeholder="PMP-SUB-75"></label>
+      <label>Brand<input id="f-brand" placeholder="Kirloskar"></label>
+      <label>Model<input id="f-model" placeholder="KS4-7.5"></label>
+      <label>Rating<input id="f-rating" placeholder="7.5 HP / 5.5 kW"><span class="hint">HP, kW, Wp, kVA, Ah…</span></label>
+      <label>Supply<input id="f-supply" placeholder="415 V · 3-ph"></label>
+      <label>On hand<input id="f-qty" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+      <label>Unit<input id="f-unit" placeholder="pcs" value="pcs"></label>
+      <label>Reorder at<input id="f-reorderAt" type="number" min="0" step="1" inputmode="numeric" value="0"><span class="hint">Flag low stock at or below this</span></label>
+      <label>Unit cost (₹)<input id="f-unitCost" type="number" min="0" step="1" inputmode="decimal" value="0"></label>
+      <label class="full">Location<input id="f-location" placeholder="Main store · Rack B2"></label>
+      <label class="full">Notes<textarea id="f-notes" placeholder="Supplier, warranty, serials…"></textarea></label>
+    </div>
+    <div class="err" id="formErr" hidden></div>
+    <div class="actions">
+      <button class="btn danger" id="delBtn" type="button" hidden>Delete</button>
+      <div class="right">
+        <button class="btn" id="cancelBtn" type="button">Cancel</button>
+        <button class="btn primary" id="saveBtn" type="submit">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  const CATS = ["Pump", "Motor", "Solar panel", "Inverter", "Rooftop kit", "Battery", "Controller", "Spares"];
+  const $ = (id) => document.getElementById(id);
+  const inr = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+  const inrShort = (n) => n >= 1e7 ? "₹" + (n / 1e7).toFixed(2) + " Cr" : n >= 1e5 ? "₹" + (n / 1e5).toFixed(2) + " L" : "₹" + inr.format(n);
+
+  let db = null, col = null;
+  let items = [];
+  let canWrite = true;
+  let loaded = false;
+  let cat = "All", query = "", levelFilter = "all";
+  let editingId = null;
+  const pending = new Map();   // id -> optimistic qty
+  const timers = new Map();
+  const chains = new Map();    // id -> promise chain, one write at a time per doc
+
+  try { const saved = JSON.parse(localStorage.getItem("stock-ui") || "{}"); if (saved.cat) cat = saved.cat; if (saved.level) levelFilter = saved.level; } catch (e) {}
+  const saveUi = () => { try { localStorage.setItem("stock-ui", JSON.stringify({ cat, level: levelFilter })); } catch (e) {} };
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const qtyOf = (it) => pending.has(it.id) ? pending.get(it.id) : num(it.qty);
+  const levelOf = (it) => { const q = qtyOf(it); return q <= 0 ? "out" : q <= num(it.reorderAt) ? "low" : "ok"; };
+
+  function setConn(state, text) {
+    $("led").className = "led " + state;
+    $("conn").textContent = text;
+  }
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2200);
+  }
+  function applyWriteGate() {
+    $("addBtn").hidden = !canWrite;
+  }
+  function onWriteError(e) {
+    if (e && (e.code === "invalid_argument" || e.code === "not_granted")) {
+      canWrite = false; applyWriteGate(); render();
+      showBanner("You have view-only access, so changes can't be saved. Ask the owner to make you a Contributor.");
+    } else if (e && e.code === "quota_exceeded") {
+      toast("Storage is full. Delete unused items, then try again.");
+    } else {
+      toast("Couldn't save. Check your connection and try again.");
+    }
+  }
+  function showBanner(msg) { const b = $("banner"); b.textContent = msg; b.hidden = false; }
+
+  function renderChips() {
+    const counts = { All: items.length };
+    CATS.forEach((c) => counts[c] = 0);
+    items.forEach((it) => { if (counts[it.category] != null) counts[it.category]++; });
+    const list = ["All"].concat(CATS.filter((c) => counts[c] > 0 || c === cat));
+    $("chips").innerHTML = list.map((c) =>
+      `<button type="button" class="chip" data-cat="${esc(c)}" aria-pressed="${c === cat}">${esc(c)} <b>${counts[c] || 0}</b></button>`).join("");
+  }
+
+  function renderSummary() {
+    let units = 0, value = 0, low = 0, out = 0;
+    const cats = new Set();
+    items.forEach((it) => {
+      const q = qtyOf(it); units += q; value += q * num(it.unitCost); cats.add(it.category);
+      const l = levelOf(it); if (l === "low") low++; if (l === "out") out++;
+    });
+    $("rItems").textContent = loaded ? items.length : "–";
+    $("rItemsS").textContent = loaded ? cats.size + " categories" : " ";
+    $("rUnits").textContent = loaded ? inr.format(units) : "–";
+    $("rUnitsS").textContent = loaded ? "across all locations" : " ";
+    $("rValue").textContent = loaded ? inrShort(value) : "–";
+    $("rLow").textContent = loaded ? (low + out) : "–";
+    $("rLowS").textContent = loaded ? `${low} low · ${out} out` : " ";
+    $("rLowBox").classList.toggle("crit", out > 0);
+  }
+
+  function renderRows() {
+    const ql = query.trim().toLowerCase();
+    const shown = items.filter((it) => {
+      if (cat !== "All" && it.category !== cat) return false;
+      const l = levelOf(it);
+      if (levelFilter === "attn" && l === "ok") return false;
+      if (levelFilter === "out" && l !== "out") return false;
+      if (!ql) return true;
+      return [it.name, it.brand, it.model, it.sku, it.location, it.rating, it.notes].some((f) => String(f || "").toLowerCase().includes(ql));
+    }).sort((a, b) => {
+      const rank = { out: 0, low: 1, ok: 2 };
+      return rank[levelOf(a)] - rank[levelOf(b)] || String(a.name).localeCompare(String(b.name));
+    });
+
+    $("rows").innerHTML = shown.map((it) => {
+      const q = qtyOf(it), r = num(it.reorderAt), l = levelOf(it);
+      const scale = Math.max(q, r * 2, 1);
+      const fill = Math.min(100, (q / scale) * 100);
+      const tick = Math.min(100, (r / scale) * 100);
+      const label = { ok: "In stock", low: "Low", out: "Out" }[l];
+      const sub = [it.brand, it.model].filter(Boolean).join(" · ");
+      return `<tr class="${l}" data-id="${esc(it.id)}">
+        <td class="sev"><i></i></td>
+        <td><div class="name">${esc(it.name)}</div><div class="sub">${esc(sub)}${it.sku ? ` <span class="sku">#${esc(it.sku)}</span>` : ""}</div></td>
+        <td class="cat">${esc(it.category)}</td>
+        <td class="spec">${esc(it.rating || "—")}<div class="sub">${esc(it.supply || "")}</div></td>
+        <td class="loc">${esc(it.location || "—")}</td>
+        <td class="num">
+          <div class="stock">
+            <div class="qty${pending.has(it.id) ? " saving" : ""}">
+              ${canWrite ? `<button type="button" data-step="-1" aria-label="Remove one ${esc(it.name)}">−</button>` : ""}
+              <output>${inr.format(q)}</output><span class="unit">${esc(it.unit || "pcs")}</span>
+              ${canWrite ? `<button type="button" data-step="1" aria-label="Add one ${esc(it.name)}">+</button>` : ""}
+            </div>
+            <div class="gauge" title="Reorder at ${r}"><span style="width:${fill}%"></span><em style="left:${tick}%"></em></div>
+            <div class="reorder">reorder ≤ ${inr.format(r)}</div>
+          </div>
+        </td>
+        <td><span class="pill ${l}">${label}</span></td>
+        <td class="num val">₹${inr.format(q * num(it.unitCost))}<div class="sub">@ ₹${inr.format(num(it.unitCost))}</div></td>
+        <td>${canWrite ? `<button type="button" class="edit" data-edit="1">Edit</button>` : ""}</td>
+      </tr>`;
+    }).join("");
+
+    const empty = $("empty");
+    if (!loaded) { empty.hidden = false; empty.innerHTML = db === false ? "<strong>Stock data isn't available here</strong>Open this page on claude.ai while signed in to see and edit the register." : "<strong>Loading stock…</strong>"; }
+    else if (!items.length) { empty.hidden = false; empty.innerHTML = "<strong>No items yet</strong>Use “Add item” to log your first pump, motor or panel."; }
+    else if (!shown.length) { empty.hidden = false; empty.innerHTML = "<strong>Nothing matches</strong>Try a different category, level or search."; }
+    else empty.hidden = true;
+    $("footCount").textContent = loaded ? `Showing ${shown.length} of ${items.length}` : "";
+  }
+
+  function render() { renderChips(); renderSummary(); renderRows(); }
+
+  // Quick +/- : optimistic, coalesced into one write per pause, serialized per doc.
+  function step(id, delta) {
+    const it = items.find((x) => x.id === id); if (!it || !col) return;
+    const next = Math.max(0, qtyOf(it) + delta);
+    pending.set(id, next); render();
+    clearTimeout(timers.get(id));
+    timers.set(id, setTimeout(() => {
+      const value = pending.get(id);
+      const prev = chains.get(id) || Promise.resolve();
+      const p = prev.then(() => col.doc(id).update({ qty: value, updatedAt: new Date().toISOString() }))
+        .then(() => { if (pending.get(id) === value) pending.delete(id); render(); })
+        .catch((e) => { pending.delete(id); render(); onWriteError(e); });
+      chains.set(id, p);
+    }, 600));
+  }
+
+  // Editor
+  const F = ["name", "category", "sku", "brand", "model", "rating", "supply", "qty", "unit", "reorderAt", "unitCost", "location", "notes"];
+  $("f-category").innerHTML = CATS.map((c) => `<option>${esc(c)}</option>`).join("");
+  function openEditor(id) {
+    editingId = id || null;
+    const it = id ? items.find((x) => x.id === id) : null;
+    $("dlgTitle").textContent = it ? "Edit item" : "Add item";
+    F.forEach((k) => {
+      const el = $("f-" + k);
+      if (it) el.value = k === "qty" ? qtyOf(it) : (it[k] ?? "");
+      else el.value = { qty: 0, reorderAt: 0, unitCost: 0, unit: "pcs", category: cat !== "All" ? cat : "Pump" }[k] ?? "";
+    });
+    $("delBtn").hidden = !it; $("delBtn").classList.remove("armed"); $("delBtn").textContent = "Delete";
+    $("formErr").hidden = true;
+    $("dlg").showModal();
+    $("f-name").focus();
+  }
+  function closeEditor() { $("dlg").close(); editingId = null; }
+
+  $("form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!col) return;
+    const data = {};
+    F.forEach((k) => { data[k] = $("f-" + k).value.trim(); });
+    if (!data.name) { $("formErr").textContent = "Give the item a name."; $("formErr").hidden = false; $("f-name").focus(); return; }
+    ["qty", "reorderAt", "unitCost"].forEach((k) => data[k] = Math.max(0, num(data[k])));
+    data.updatedAt = new Date().toISOString();
+    $("saveBtn").disabled = true;
+    try {
+      if (editingId) {
+        const id = editingId;
+        pending.delete(id); clearTimeout(timers.get(id));
+        const prev = chains.get(id) || Promise.resolve();
+        const p = prev.then(() => col.doc(id).set(data)); chains.set(id, p.catch(() => {}));
+        await p; toast("Saved " + data.name);
+      } else {
+        await col.add(data); toast("Added " + data.name);
+      }
+      closeEditor();
+    } catch (e) { onWriteError(e); }
+    finally { $("saveBtn").disabled = false; }
+  });
+  $("cancelBtn").addEventListener("click", closeEditor);
+  $("delBtn").addEventListener("click", async () => {
+    const b = $("delBtn");
+    if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; return; }
+    const id = editingId, it = items.find((x) => x.id === id);
+    try { await col.doc(id).delete(); toast("Deleted " + (it ? it.name : "item")); closeEditor(); }
+    catch (e) { onWriteError(e); }
+  });
+
+  // Events
+  $("addBtn").addEventListener("click", () => openEditor(null));
+  $("chips").addEventListener("click", (e) => { const b = e.target.closest("[data-cat]"); if (!b) return; cat = b.dataset.cat; saveUi(); render(); });
+  $("q").addEventListener("input", (e) => { query = e.target.value; renderRows(); });
+  $("stateFilter").value = levelFilter;
+  $("stateFilter").addEventListener("change", (e) => { levelFilter = e.target.value; saveUi(); renderRows(); });
+  $("rows").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-id]"); if (!tr) return;
+    const s = e.target.closest("[data-step]"); if (s) return step(tr.dataset.id, Number(s.dataset.step));
+    if (e.target.closest("[data-edit]")) openEditor(tr.dataset.id);
+  });
+
+  render();
+
+  // Connect
+  (async () => {
+    const use = window.claude && window.claude.use ? (n) => window.claude.use(n) : () => Promise.resolve(null);
+    const [dbNs, user] = await Promise.all([use("db"), use("user")]);
+    if (user) {
+      try { const w = await user.can("data.write"); if (w === false) canWrite = false; } catch (e) {}
+      applyWriteGate();
+    }
+    if (!dbNs) { db = false; canWrite = false; applyWriteGate(); setConn("off", "Offline · stock data unavailable"); render(); return; }
+    db = dbNs; col = db.collection("items");
+    col.onSnapshot((snap) => {
+      items = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+      loaded = true;
+      setConn("live", "Live · shared register");
+      render();
+    }, (e) => {
+      setConn("off", e && e.code === "revoked" ? "Access changed · reload to continue" : "Connection lost · reload to reconnect");
+    });
+  })();
+})();
+</script>
