@@ -317,6 +317,7 @@
       <button type="button" data-view="receive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Receive</button>
       <button type="button" data-view="sell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>Sell</button>
       <button type="button" data-view="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/></svg>Records</button>
+      <button type="button" data-view="parties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Parties</button>
       <button type="button" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
     </nav>
   </header>
@@ -382,8 +383,10 @@
         <div class="card">
           <h3>Delivery details</h3>
           <div class="fields">
-            <label class="field full">Supplier / factory<input id="rcv-supplier" placeholder="e.g. factory or distributor name"></label>
+            <label class="field full">Supplier / factory<input id="rcv-supplier" list="supplierOptions" placeholder="Pick a saved supplier or type a new one"></label>
+            <div class="full small" id="supHint" hidden></div>
             <label class="field">Challan or invoice no.<input id="rcv-ref" placeholder="DC-1042"></label>
+            <label class="field">Bill amount (₹) <span class="hint">incl. GST, for payments</span><input id="rcv-billAmount" type="number" min="0" step="0.01" placeholder="Optional"></label>
             <label class="field">Date received<input id="rcv-date" type="date"></label>
             <label class="field full">Notes<textarea id="rcv-notes" placeholder="Vehicle no., damages, remarks"></textarea></label>
           </div>
@@ -410,7 +413,8 @@
         <div class="card">
           <div class="step-head"><span class="step">1</span><h3>Customer</h3></div>
           <div class="fields">
-            <label class="field">Customer name<input id="c-name" placeholder="Business or person"></label>
+            <label class="field">Customer name<input id="c-name" list="customerOptions" placeholder="Pick a saved customer or type a new one"></label>
+            <div class="full small" id="custHint" hidden></div>
             <label class="field">Phone<input id="c-phone" inputmode="tel" placeholder="98xxxxxx10"></label>
             <label class="field">GSTIN <span class="hint">optional</span><input id="c-gstin" placeholder="22AAAAA0000A1Z5" style="text-transform:uppercase"></label>
             <label class="field">State (place of supply)<select id="c-state"></select></label>
@@ -471,6 +475,42 @@
     </div>
     <div class="row" id="recActions"></div>
     <div class="rlist" id="rlist"></div>
+  </section>
+
+  <!-- PARTIES -->
+  <section class="view" id="v-parties" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Customers &amp; suppliers</h2>
+        <p>Everyone you sell to or buy from, with their orders, payments and what's still due. New customers and suppliers are saved automatically when you invoice or receive goods.</p>
+      </div>
+      <div class="row" data-write>
+        <button class="btn" type="button" id="addSupplierBtn">Add supplier</button>
+        <button class="btn primary" type="button" id="addCustomerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add customer</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="k">To receive from customers</span><span class="v" id="pRecv">–</span><span class="s" id="pRecvS">&nbsp;</span></div>
+      <div class="stat" id="pOverBox"><span class="k">Overdue from customers</span><span class="v" id="pOver">–</span><span class="s" id="pOverS">&nbsp;</span></div>
+      <div class="stat"><span class="k">To pay suppliers</span><span class="v" id="pPay">–</span><span class="s" id="pPayS">&nbsp;</span></div>
+      <div class="stat"><span class="k">Received this month</span><span class="v" id="pMonth">–</span><span class="s" id="pMonthS">&nbsp;</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Customers or suppliers">
+        <button type="button" data-ptype="customer" aria-pressed="true">Customers</button>
+        <button type="button" data-ptype="supplier" aria-pressed="false">Suppliers</button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="input" id="partyQ" type="search" placeholder="Search name, city, phone or GSTIN" aria-label="Search customers and suppliers">
+      </div>
+      <select class="input" id="partyFilter" style="width:auto" aria-label="Filter by balance">
+        <option value="all">Everyone</option>
+        <option value="due">With money due</option>
+        <option value="overdue">Overdue only</option>
+      </select>
+    </div>
+    <div class="rlist" id="partyList"></div>
   </section>
 
   <!-- SETTINGS -->
@@ -555,6 +595,53 @@
   </div>
 </dialog>
 
+<!-- Party edit dialog -->
+<dialog id="ptDlg">
+  <form class="dlg" id="ptForm" novalidate>
+    <div class="dlg-head"><div class="grow"><h3 id="ptTitle">Add customer</h3></div><button type="button" class="close" data-close aria-label="Close">×</button></div>
+    <div class="fields">
+      <label class="field full">Name<input id="pt-name" placeholder="Business name"></label>
+      <label class="field">Type<select id="pt-type"><option value="customer">Customer</option><option value="supplier">Supplier</option></select></label>
+      <label class="field">Contact person<input id="pt-contact"></label>
+      <label class="field">Phone<input id="pt-phone" inputmode="tel"></label>
+      <label class="field">Email<input id="pt-email" type="email"></label>
+      <label class="field">GSTIN<input id="pt-gstin" style="text-transform:uppercase"></label>
+      <label class="field">State<select id="pt-state"></select></label>
+      <label class="field full">Address<input id="pt-address"></label>
+      <label class="field">City / town<input id="pt-city"></label>
+      <label class="field">PIN code<input id="pt-pin" inputmode="numeric" maxlength="6"></label>
+      <label class="field">Credit period (days)<input id="pt-creditDays" type="number" min="0" step="1" placeholder="30"><span class="hint">Bills become overdue after this many days</span></label>
+      <label class="field">Opening balance (₹)<input id="pt-openingBalance" type="number" step="0.01" placeholder="0"><span class="hint">What was already due before using this app</span></label>
+      <label class="field full">Notes<textarea id="pt-notes"></textarea></label>
+    </div>
+    <div class="err" id="ptErr" hidden></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="ptDelete" hidden>Delete</button>
+      <div class="row"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary" id="ptSave">Save</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Payment dialog -->
+<dialog id="payDlg">
+  <form class="dlg" id="payForm" novalidate>
+    <div class="dlg-head"><div class="grow"><h3 id="payTitle">Record payment</h3><p class="muted small" id="paySub"></p></div><button type="button" class="close" data-close aria-label="Close">×</button></div>
+    <div class="fields">
+      <label class="field">Amount (₹)<input id="pay-amount" type="number" min="0" step="0.01"></label>
+      <label class="field">Date<input id="pay-date" type="date"></label>
+      <label class="field">Mode<select id="pay-mode"><option>UPI</option><option>NEFT / RTGS</option><option>Cheque</option><option>Cash</option><option>Card</option><option>Other</option></select></label>
+      <label class="field">Reference <span class="hint">UTR, cheque no.</span><input id="pay-ref"></label>
+      <label class="field full">Apply to<select id="pay-doc"></select></label>
+      <label class="field full">Note<input id="pay-note"></label>
+    </div>
+    <div class="err" id="payErr" hidden></div>
+    <div class="dlg-foot"><span></span><div class="row"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary" id="paySave">Save payment</button></div></div>
+  </form>
+</dialog>
+
+<datalist id="customerOptions"></datalist>
+<datalist id="supplierOptions"></datalist>
+
 <!-- Invoice / receipt viewer -->
 <dialog id="vDlg" class="wide">
   <div class="dlg">
@@ -611,13 +698,13 @@
   }
 
   // ---------- State ----------
-  const S = { db: null, dl: null, canWrite: true, products: [], receipts: [], invoices: [], adjustments: [], settings: {}, ready: { p: false, r: false, i: false, a: false } };
+  const S = { db: null, dl: null, canWrite: true, products: [], receipts: [], invoices: [], adjustments: [], parties: [], payments: [], settings: {}, ready: { p: false, r: false, i: false, a: false, pt: false, pm: false } };
   let pmap = new Map(), codeIdx = new Map(), gtinIdx = new Map(), stock = new Map(), serialIdx = new Map(), inSerials = new Map();
   let view = store.get("view", "stock");
   let catFilter = "All", recTab = "inv";
   let rcv = store.get("rcv", null) || freshRcv();
   let sell = store.get("sell", null) || freshSell();
-  function freshRcv() { return { supplier: "", ref: "", date: today(), notes: "", lines: [], active: null }; }
+  function freshRcv() { return { supplier: "", partyId: null, ref: "", billAmount: "", date: today(), notes: "", lines: [], active: null }; }
   function freshSell() { return { customer: { name: "", phone: "", gstin: "", state: "", address: "", city: "", pin: "", so: "", vehicle: "", distance: "", transName: "", transId: "" }, lines: [], active: null }; }
   const saveRcv = () => store.set("rcv", rcv);
   const saveSell = () => store.set("sell", sell);
@@ -1163,8 +1250,8 @@
     if (e.target.matches("[data-qty]")) l.qty = Math.max(0, Math.round(num(e.target.value)));
     saveRcv(); setTimeout(renderReceive, 0);
   });
-  ["supplier", "ref", "date", "notes"].forEach((k) => $("rcv-" + k).addEventListener("input", (e) => { rcv[k] = e.target.value; saveRcv(); }));
-  function fillRcvForm() { ["supplier", "ref", "date", "notes"].forEach((k) => ($("rcv-" + k).value = rcv[k] || "")); }
+  ["supplier", "ref", "billAmount", "date", "notes"].forEach((k) => $("rcv-" + k).addEventListener("input", (e) => { rcv[k] = e.target.value; saveRcv(); }));
+  function fillRcvForm() { ["supplier", "ref", "billAmount", "date", "notes"].forEach((k) => ($("rcv-" + k).value = rcv[k] || "")); if (typeof supHint === "function") supHint(); }
   const addRcvPick = () => { const pid = pickProduct("rcvPick"); if (!pid) return; rcvLine(pid); if (prod(pid).serialized) rcv.active = pid; saveRcv(); renderReceive(); };
   $("rcvPickBtn").onclick = addRcvPick;
   $("rcvPick").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addRcvPick(); } });
@@ -1183,6 +1270,8 @@
     };
     $("rcvConfirm").disabled = true;
     try {
+      doc.billAmount = Math.max(0, r2(num(rcv.billAmount)));
+      if (doc.supplier) { doc.partyId = await ensureParty("supplier", rcv.partyId, { name: doc.supplier }); }
       const ref = await col("receipts").add(doc);
       doc.id = ref.id;
       rcv = freshRcv(); saveRcv(); fillRcvForm(); $("rcv-fb").hidden = true; renderReceive();
@@ -1325,7 +1414,7 @@
     if (k === "gstin" && !sell.customer.state) { const st = stateFromGstin(sell.customer.gstin); if (st) { sell.customer.state = st; $("c-state").value = st; } }
     saveSell(); renderSellTotals();
   }));
-  function fillSellForm() { CF.forEach((k) => ($("c-" + k).value = sell.customer[k] || "")); }
+  function fillSellForm() { CF.forEach((k) => ($("c-" + k).value = sell.customer[k] || "")); if (typeof custHint === "function") custHint(); }
   const addSellPick = () => { const pid = pickProduct("sellPick"); if (!pid) return; sellLine(pid); saveSell(); renderSell(); };
   $("sellPickBtn").onclick = addSellPick;
   $("sellPick").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addSellPick(); } });
@@ -1351,6 +1440,7 @@
     if (doc.no.length > 16) { toast("The invoice prefix is too long for e-invoicing. Use up to 5 characters in Settings."); return; }
     $("sellCreate").disabled = true;
     try {
+      doc.partyId = await ensureParty("customer", sell.partyId, { name: customer.name, phone: customer.phone, gstin: customer.gstin, state: customer.state, address: customer.address, city: customer.city, pin: customer.pin });
       const ref = await col("invoices").add(doc); doc.id = ref.id;
       sell = freshSell(); saveSell(); fillSellForm(); $("sell-fb").hidden = true; renderSell();
       toast(`Invoice ${doc.no} created`);
@@ -1587,13 +1677,18 @@
   function showInvoice(inv) {
     $("vTitle").textContent = "Invoice " + inv.no;
     $("vSub").textContent = `${inv.customer?.name || ""} · ${fdate(inv.date)} · ${rs(inv.totals?.total || 0)}`;
-    $("vBody").innerHTML = einvPanel(inv) + invoiceHtml(inv) + (!(sellerOf(inv).name) ? `<p class="pill warn">Add your business name and GSTIN in Settings so they print on invoices.</p>` : "");
+    viewing = { kind: "invoice", id: inv.id };
+    const pst = invPay.get(inv.id), pid = invParty(inv);
+    const payStrip = `<div class="row" style="justify-content:space-between"><div class="row">${pst ? payPill(pst) : ""}${pst && pst.paid > 0.5 && pst.left > 0.5 ? `<span class="muted small">${rs(pst.paid)} received</span>` : ""}</div><div class="row">${pid ? `<button type="button" class="btn ghost" id="invParty">Customer statement</button>` : ""}${pid && S.canWrite && (!pst || pst.left > 0.5) ? `<button type="button" class="btn" id="invPay">Record payment</button>` : ""}</div></div>`;
+    $("vBody").innerHTML = payStrip + einvPanel(inv) + invoiceHtml(inv) + (!(sellerOf(inv).name) ? `<p class="pill warn">Add your business name and GSTIN in Settings so they print on invoices.</p>` : "");
     const e = inv.einv || {};
     $("vFoot").innerHTML = `<span class="muted small">${e.ewbNo ? "PDF includes the e-way bill on page 2" : `${(inv.lines || []).reduce((a, l) => a + (l.serials || []).length, 0)} serial numbers recorded`}</span><div class="row"><button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="vPdf">Download PDF</button></div>`;
     $("vPdf").onclick = () => invoicePdf(inv);
     if (e.qr) qrDataUrl(e.qr).then((u) => { const im = $("irnQr"); if (im) im.src = u; }).catch(() => {});
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
     on("eiDownload", () => downloadEinv([inv]));
+    on("invPay", () => openPayment(pid, inv.id));
+    on("invParty", () => showParty(pid));
     on("eiImport", () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, inv)));
     on("eiManualBtn", () => { $("eiManual").hidden = !$("eiManual").hidden; });
     on("eiSave", async () => {
@@ -1748,6 +1843,8 @@
 
   // ---------- Receipt view ----------
   function showReceipt(r) {
+    viewing = { kind: "receipt", id: r.id };
+    const bst = billPay.get(r.id), spid = billParty(r);
     $("vTitle").textContent = "Goods received " + r.no;
     $("vSub").textContent = [r.supplier, r.ref ? "Challan " + r.ref : "", fdate(r.date)].filter(Boolean).join(" · ");
     const sns = [];
@@ -1756,10 +1853,256 @@
       <div class="line-nums"><div class="mini">As per challan<span class="val">${num(l.expected) || "—"}</span></div><div class="mini">Received<span class="val">${num(l.qty)} ${esc(l.unit || "")}</span></div></div>
       ${(l.serials || []).length ? `<div class="serials">${l.serials.map((s) => `<span class="sn plain">${esc(s)}</span>`).join("")}</div>` : ""}</div>`).join("")}</div>
       ${r.notes ? `<p class="muted">${esc(r.notes)}</p>` : ""}`;
+    if (num(r.billAmount) || spid) $("vBody").insertAdjacentHTML("afterbegin", `<div class="row" style="justify-content:space-between"><div class="row">${num(r.billAmount) ? `<span class="small">Bill amount <b>${rs2(num(r.billAmount))}</b></span> ${payPill(bst)}` : `<span class="muted small">No bill amount entered</span>`}</div><div class="row">${spid ? `<button type="button" class="btn ghost" id="rcParty">Supplier statement</button>` : ""}${spid && S.canWrite && bst && bst.left > 0.5 ? `<button type="button" class="btn" id="rcPay">Record payment</button>` : ""}</div></div>`);
     $("vFoot").innerHTML = `<span class="muted small">${sns.length ? `Labels encode product code and serial, so one scan at dispatch finds both.` : ""}</span><div class="row"><button type="button" class="btn" data-close>Close</button>${sns.length ? `<button type="button" class="btn primary" id="vLabels">Download ${sns.length} serial labels</button>` : ""}</div>`;
     const lb = $("vLabels"); if (lb) lb.onclick = () => labelsPdf(sns, `labels-${r.no}.pdf`);
+    if ($("rcParty")) $("rcParty").onclick = () => showParty(spid);
+    if ($("rcPay")) $("rcPay").onclick = () => openPayment(spid, r.id);
     if (!$("vDlg").open) $("vDlg").showModal();
   }
+
+  // ---------- CUSTOMERS & SUPPLIERS ----------
+  let partyIdx = new Map(), invPay = new Map(), billPay = new Map();
+  let ptype = "customer", viewing = null;
+  const addDays = (d, n) => { const t = new Date(String(d).slice(0, 10) + "T00:00:00"); if (isNaN(t)) return ""; t.setDate(t.getDate() + n); return t.toLocaleDateString("en-CA"); };
+  function matchParty(type, id, gstin, name) {
+    const list = S.parties.filter((p) => p.type === type);
+    if (id && list.some((p) => p.id === id)) return id;
+    const g = K(gstin); if (g) { const m = list.find((p) => K(p.gstin) === g); if (m) return m.id; }
+    const n = K(name); if (n) { const m = list.find((p) => K(p.name) === n); if (m) return m.id; }
+    return null;
+  }
+  const invParty = (inv) => matchParty("customer", inv.partyId, inv.customer && inv.customer.gstin, inv.customer && inv.customer.name);
+  const billParty = (r) => matchParty("supplier", r.partyId, "", r.supplier);
+  function rebuildParties() {
+    partyIdx = new Map(); invPay = new Map(); billPay = new Map();
+    S.parties.forEach((p) => partyIdx.set(p.id, { p, docs: [], pays: [], billed: 0, paid: 0, due: 0, overdue: 0, advance: 0 }));
+    S.invoices.forEach((inv) => { const id = invParty(inv); if (id) partyIdx.get(id).docs.push({ kind: "inv", id: inv.id, no: inv.no, date: inv.date, amount: num(inv.totals && inv.totals.total), ref: inv }); });
+    S.receipts.forEach((r) => { if (!num(r.billAmount)) return; const id = billParty(r); if (id) partyIdx.get(id).docs.push({ kind: "bill", id: r.id, no: r.ref ? "Bill " + r.ref : r.no, date: r.date, amount: num(r.billAmount), ref: r }); });
+    S.payments.forEach((pm) => { const e = partyIdx.get(pm.partyId); if (e) e.pays.push(pm); });
+    const td = today();
+    for (const e of partyIdx.values()) {
+      const ob = num(e.p.openingBalance);
+      if (ob > 0) e.docs.push({ kind: "open", id: "open", no: "Opening balance", date: "", amount: ob });
+      e.docs.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.no).localeCompare(String(b.no)));
+      e.pays.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.createdAt).localeCompare(String(b.createdAt)));
+      const left = new Map(e.docs.map((d) => [d.id, d.amount]));
+      let pool = 0;
+      e.pays.forEach((pm) => {
+        const a = num(pm.amount); e.paid += a;
+        if (pm.docId && left.has(pm.docId)) { const take = Math.min(a, left.get(pm.docId)); left.set(pm.docId, left.get(pm.docId) - take); pool += a - take; } else pool += a;
+      });
+      e.docs.forEach((d) => { const take = Math.min(pool, left.get(d.id)); left.set(d.id, r2(left.get(d.id) - take)); pool = r2(pool - take); });
+      const days = e.p.creditDays === "" || e.p.creditDays == null ? 30 : num(e.p.creditDays);
+      e.docs.forEach((d) => {
+        const l = r2(left.get(d.id)), dueDate = d.date ? addDays(d.date, days) : "";
+        d.st = { total: d.amount, paid: r2(d.amount - l), left: l, dueDate, overdue: l > 0.5 && (!dueDate || dueDate < td) };
+        if (d.kind === "inv") invPay.set(d.id, d.st); if (d.kind === "bill") billPay.set(d.id, d.st);
+        e.billed += d.amount; if (d.st.overdue) e.overdue += l;
+      });
+      e.billed = r2(e.billed); e.paid = r2(e.paid); e.due = r2(e.billed - e.paid); e.overdue = r2(e.overdue); e.advance = pool;
+      e.last = e.docs.filter((d) => d.date).map((d) => d.date).concat(e.pays.map((p) => p.date)).sort().pop() || "";
+    }
+  }
+  function payPill(st) {
+    if (!st) return "";
+    if (st.left <= 0.5) return `<span class="pill ok">Paid</span>`;
+    if (st.overdue) return `<span class="pill err">Overdue ${rs(st.left)}</span>`;
+    if (st.paid > 0.5) return `<span class="pill warn">Part paid · ${rs(st.left)} due</span>`;
+    return `<span class="pill neutral">Due ${st.dueDate ? fdate(st.dueDate) : ""}</span>`;
+  }
+  const money = (n) => (n >= 1e7 ? "₹" + (n / 1e7).toFixed(2) + " Cr" : n >= 1e5 ? "₹" + (n / 1e5).toFixed(2) + " L" : rs(n));
+  function renderParties() {
+    const ready = S.ready.pt;
+    let recv = 0, over = 0, pay = 0, overN = 0, month = 0, monthN = 0;
+    const m0 = today().slice(0, 7);
+    for (const e of partyIdx.values()) {
+      if (e.p.type === "customer") { recv += Math.max(0, e.due); over += e.overdue; if (e.overdue > 0.5) overN++; }
+      else pay += Math.max(0, e.due);
+    }
+    S.payments.forEach((pm) => { if (pm.type === "in" && String(pm.date).slice(0, 7) === m0) { month += num(pm.amount); monthN++; } });
+    $("pRecv").textContent = ready ? money(recv) : "–";
+    $("pRecvS").textContent = ready ? `${S.parties.filter((p) => p.type === "customer").length} customers` : " ";
+    $("pOver").textContent = ready ? money(over) : "–";
+    $("pOverS").textContent = ready ? (overN ? `${overN} customer${overN > 1 ? "s" : ""} past their credit period` : "Nothing overdue") : " ";
+    $("pOverBox").classList.toggle("attn", over > 0.5);
+    $("pPay").textContent = ready ? money(pay) : "–";
+    $("pPayS").textContent = ready ? `${S.parties.filter((p) => p.type === "supplier").length} suppliers` : " ";
+    $("pMonth").textContent = ready ? money(month) : "–";
+    $("pMonthS").textContent = ready ? `${monthN} payment${monthN === 1 ? "" : "s"}` : " ";
+    document.querySelectorAll("[data-ptype]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.ptype === ptype)));
+    const q = $("partyQ").value.trim().toLowerCase(), f = $("partyFilter").value;
+    const list = [...partyIdx.values()].filter((e) => e.p.type === ptype)
+      .filter((e) => f === "all" || (f === "due" ? e.due > 0.5 : e.overdue > 0.5))
+      .filter((e) => !q || [e.p.name, e.p.city, e.p.phone, e.p.gstin, e.p.contact].some((x) => String(x || "").toLowerCase().includes(q)))
+      .sort((a, b) => b.overdue - a.overdue || b.due - a.due || String(a.p.name).localeCompare(String(b.p.name)));
+    const el = $("partyList"), word = ptype === "customer" ? "customers" : "suppliers";
+    if (!ready) { el.innerHTML = `<div class="empty"><h3>${S.db === false ? "Data isn't available here" : "Loading…"}</h3></div>`; return; }
+    if (!list.length) {
+      el.innerHTML = `<div class="empty"><h3>${S.parties.some((p) => p.type === ptype) ? "Nobody matches" : `No ${word} yet`}</h3><p>${S.parties.some((p) => p.type === ptype) ? "Try another search or filter." : ptype === "customer" ? "Customers are saved when you create an invoice, or add one now." : "Suppliers are saved when you receive goods, or add one now."}</p></div>`;
+      return;
+    }
+    el.innerHTML = list.map((e) => {
+      const p = e.p, docs = e.docs.filter((d) => d.kind !== "open").length;
+      return `<button type="button" class="rrow" data-party="${esc(p.id)}">
+        <span><b>${esc(p.name)}</b><div class="muted small">${esc([p.city, p.state].filter(Boolean).join(", ") || "No address yet")}</div></span>
+        <span class="small"><div>${esc(p.phone || p.contact || "")}</div><div class="muted mono">${esc(p.gstin || "No GSTIN")}</div></span>
+        <span class="when small muted">${docs} ${ptype === "customer" ? "invoice" : "bill"}${docs === 1 ? "" : "s"}${e.last ? `<div>Last ${fdate(e.last)}</div>` : ""}</span>
+        <span style="text-align:right"><div class="amt">${e.due > 0.5 ? rs(e.due) : e.due < -0.5 ? rs(-e.due) + " advance" : "Settled"}</div>${e.overdue > 0.5 ? `<span class="pill err">${rs(e.overdue)} overdue</span>` : ""}</span>
+      </button>`;
+    }).join("");
+  }
+  document.querySelectorAll("[data-ptype]").forEach((b) => b.onclick = () => { ptype = b.dataset.ptype; renderParties(); });
+  $("partyQ").addEventListener("input", renderParties);
+  $("partyFilter").addEventListener("change", renderParties);
+  $("partyList").addEventListener("click", (e) => { const r = e.target.closest("[data-party]"); if (r) showParty(r.dataset.party); });
+  $("addCustomerBtn").onclick = () => openPartyEdit(null, "customer");
+  $("addSupplierBtn").onclick = () => openPartyEdit(null, "supplier");
+
+  function showParty(id) {
+    const e = partyIdx.get(id); if (!e) { if ($("vDlg").open) $("vDlg").close(); return; }
+    viewing = { kind: "party", id };
+    const p = e.p, cust = p.type === "customer";
+    $("vTitle").textContent = p.name;
+    $("vSub").textContent = [cust ? "Customer" : "Supplier", p.gstin ? "GSTIN " + p.gstin : "", p.phone].filter(Boolean).join(" · ");
+    const rows = [];
+    e.docs.forEach((d) => rows.push({ date: d.date, sort: (d.date || "0000") + "a", label: d.kind === "inv" ? `Invoice ${d.no}` : d.kind === "bill" ? `${d.no} (${d.ref.no})` : "Opening balance", debit: d.amount, credit: 0, doc: d }));
+    e.pays.forEach((pm) => rows.push({ date: pm.date, sort: (pm.date || "0000") + "b" + pm.createdAt, label: `${cust ? "Received" : "Paid"} · ${pm.mode || ""}${pm.ref ? " · " + pm.ref : ""}${pm.docId && e.docs.find((d) => d.id === pm.docId) ? " · for " + e.docs.find((d) => d.id === pm.docId).no : ""}`, debit: 0, credit: num(pm.amount), pay: pm }));
+    rows.sort((a, b) => a.sort.localeCompare(b.sort));
+    let bal = 0; rows.forEach((r) => { bal = r2(bal + r.debit - r.credit); r.bal = bal; });
+    e._rows = rows;
+    $("vBody").innerHTML = `
+      <div class="kv"><div><b>${rs(e.billed)}</b><span>${cust ? "Invoiced" : "Billed"}</span></div><div><b>${rs(e.paid)}</b><span>${cust ? "Received" : "Paid"}</span></div><div><b style="color:${e.overdue > 0.5 ? "var(--crit)" : "inherit"}">${e.due < -0.5 ? rs(-e.due) + " adv." : rs(Math.max(0, e.due))}</b><span>${e.overdue > 0.5 ? rs(e.overdue) + " overdue" : cust ? "Still to receive" : "Still to pay"}</span></div></div>
+      <div class="row small muted">${esc([p.contact, p.phone, p.email].filter(Boolean).join(" · "))}${p.address || p.city ? `<span>${esc([p.address, p.city, p.state, p.pin].filter(Boolean).join(", "))}</span>` : ""}<span>Credit period ${p.creditDays === "" || p.creditDays == null ? 30 : num(p.creditDays)} days</span></div>
+      ${p.notes ? `<p class="small">${esc(p.notes)}</p>` : ""}
+      <div class="row">
+        ${S.canWrite ? `<button type="button" class="btn primary" id="ptPay">${cust ? "Record payment received" : "Record payment made"}</button>` : ""}
+        ${S.canWrite && cust ? `<button type="button" class="btn" id="ptSell">New sale to ${esc(p.name.split(" ")[0])}</button>` : ""}
+        ${S.canWrite ? `<button type="button" class="btn" id="ptEdit">Edit details</button>` : ""}
+        ${rows.length ? `<button type="button" class="btn ghost" id="ptCsv">Download statement</button>` : ""}
+      </div>
+      <div class="section-t">Statement</div>
+      ${rows.length ? `<div class="table-wrap"><table class="grid" style="font-size:14px"><thead><tr><th>Date</th><th>Details</th><th style="text-align:right">${cust ? "Invoiced" : "Billed"}</th><th style="text-align:right">${cust ? "Received" : "Paid"}</th><th style="text-align:right">Balance</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows.map((r, i) => `<tr ${r.doc && r.doc.kind !== "open" ? `data-open="${i}" style="cursor:pointer"` : ""}><td>${r.date ? fdate(r.date) : "—"}</td><td style="white-space:normal">${esc(r.label)}</td><td style="text-align:right">${r.debit ? f2.format(r.debit) : ""}</td><td style="text-align:right">${r.credit ? f2.format(r.credit) : ""}</td><td style="text-align:right;font-weight:600">${f2.format(r.bal)}</td><td>${r.doc ? payPill(r.doc.st) : ""}</td><td>${r.pay && S.canWrite ? `<button type="button" class="icon-btn" data-delpay="${esc(r.pay.id)}" aria-label="Delete this payment">×</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="muted">No ${cust ? "invoices" : "bills"} or payments yet.</p>`}`;
+    $("vFoot").innerHTML = `<span class="muted small">${e.advance > 0.5 ? `${rs(e.advance)} paid in advance, not yet used` : "Payments settle the oldest bills first unless you pick one"}</span><div class="row"><button type="button" class="btn" data-close>Close</button></div>`;
+    const on = (x, fn) => { const el = $(x); if (el) el.onclick = fn; };
+    on("ptPay", () => openPayment(id, null));
+    on("ptEdit", () => openPartyEdit(id));
+    on("ptSell", () => { $("vDlg").close(); startSaleFor(p); });
+    on("ptCsv", () => {
+      const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const csv = ["Date,Details," + (cust ? "Invoiced,Received" : "Billed,Paid") + ",Balance"].concat(rows.map((r) => [r.date, r.label, r.debit || "", r.credit || "", r.bal].map(q).join(","))).join("\n");
+      saveFile(`statement-${p.name.replace(/[^A-Za-z0-9]+/g, "-")}-${today()}.csv`, csv);
+    });
+    $("vBody").querySelectorAll("[data-open]").forEach((tr) => tr.onclick = (ev) => {
+      if (ev.target.closest("[data-delpay]")) return;
+      const d = rows[+tr.dataset.open].doc; if (d.kind === "inv") showInvoice(d.ref); else showReceipt(d.ref);
+    });
+    $("vBody").querySelectorAll("[data-delpay]").forEach((b) => b.onclick = async () => {
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Delete?"; b.style.width = "auto"; return; }
+      try { await col("payments").doc(b.dataset.delpay).delete(); toast("Payment deleted"); } catch (x) { writeFailed(x); }
+    });
+    if (!$("vDlg").open) $("vDlg").showModal();
+  }
+  function startSaleFor(p) {
+    sell.customer = Object.assign(freshSell().customer, { name: p.name, phone: p.phone || "", gstin: p.gstin || "", state: p.state || "", address: p.address || "", city: p.city || "", pin: p.pin || "" });
+    sell.partyId = p.id; saveSell(); fillSellForm(); setView("sell"); custHint();
+  }
+
+  const PTF = ["name", "type", "contact", "phone", "email", "gstin", "state", "address", "city", "pin", "creditDays", "openingBalance", "notes"];
+  let ptEditing = null;
+  function openPartyEdit(id, type, preset) {
+    ptEditing = id || null;
+    const p = id ? S.parties.find((x) => x.id === id) : null;
+    $("ptTitle").textContent = p ? "Edit " + p.name : type === "supplier" ? "Add supplier" : "Add customer";
+    PTF.forEach((k) => { $("pt-" + k).value = p ? (p[k] ?? "") : ""; });
+    if (!p) { $("pt-type").value = type || "customer"; $("pt-creditDays").value = 30; }
+    if (preset) Object.keys(preset).forEach((k) => { if ($("pt-" + k)) $("pt-" + k).value = preset[k] || ""; });
+    const e = id && partyIdx.get(id), used = e && (e.docs.some((d) => d.kind !== "open") || e.pays.length);
+    $("ptDelete").hidden = !p; $("ptDelete").classList.remove("armed"); $("ptDelete").textContent = "Delete"; $("ptDelete").dataset.used = used ? "1" : "";
+    $("ptErr").hidden = true;
+    $("ptDlg").showModal(); $("pt-name").focus();
+  }
+  $("pt-gstin").addEventListener("input", () => { if (!$("pt-state").value) { const st = stateFromGstin(K($("pt-gstin").value)); if (st) $("pt-state").value = st; } });
+  $("ptForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault(); if (!S.db) return;
+    const d = {}; PTF.forEach((k) => (d[k] = $("pt-" + k).value.trim()));
+    d.gstin = K(d.gstin); d.creditDays = d.creditDays === "" ? 30 : Math.max(0, Math.round(num(d.creditDays))); d.openingBalance = num(d.openingBalance);
+    const err = (m) => { $("ptErr").textContent = m; $("ptErr").hidden = false; };
+    if (!d.name) return err("Add a name.");
+    if (d.gstin && !GSTIN_RE.test(d.gstin)) return err("GSTIN should be 15 characters.");
+    if (d.pin && !/^\d{6}$/.test(d.pin)) return err("PIN code should be 6 digits.");
+    const dup = S.parties.find((x) => x.id !== ptEditing && x.type === d.type && (K(x.name) === K(d.name) || (d.gstin && K(x.gstin) === d.gstin)));
+    if (dup) return err(`${dup.name} is already saved as a ${d.type}.`);
+    d.updatedAt = new Date().toISOString();
+    try {
+      if (ptEditing) { const old = S.parties.find((x) => x.id === ptEditing); d.createdAt = old.createdAt || d.updatedAt; await col("parties").doc(ptEditing).set(d); }
+      else { d.createdAt = d.updatedAt; await col("parties").doc(newId(d.type === "supplier" ? "s_" : "c_")).set(d); }
+      toast("Saved " + d.name); $("ptDlg").close();
+    } catch (x) { writeFailed(x); }
+  });
+  $("ptDelete").addEventListener("click", async () => {
+    const b = $("ptDelete");
+    if (b.dataset.used) { $("ptErr").textContent = "This party has invoices, bills or payments, so it can't be deleted. You can rename it instead."; $("ptErr").hidden = false; return; }
+    if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Yes, delete"; return; }
+    try { await col("parties").doc(ptEditing).delete(); toast("Deleted"); $("ptDlg").close(); if ($("vDlg").open && viewing && viewing.kind === "party") $("vDlg").close(); } catch (x) { writeFailed(x); }
+  });
+
+  let payFor = null;
+  function openPayment(partyId, docId) {
+    const e = partyIdx.get(partyId); if (!e) { toast("Save this customer first."); return; }
+    payFor = e; const cust = e.p.type === "customer";
+    $("payTitle").textContent = cust ? "Payment received" : "Payment made";
+    $("paySub").textContent = `${e.p.name} · ${e.due > 0.5 ? rs(e.due) + " due" : "nothing due"}`;
+    const open = e.docs.filter((d) => d.st.left > 0.5);
+    $("pay-doc").innerHTML = `<option value="">Oldest dues first</option>` + open.map((d) => `<option value="${esc(d.id)}">${esc(d.no)}${d.date ? " · " + fdate(d.date) : ""} · ${rs(d.st.left)} due</option>`).join("");
+    $("pay-doc").value = docId && open.some((d) => d.id === docId) ? docId : "";
+    const target = docId ? open.find((d) => d.id === docId) : null;
+    $("pay-amount").value = target ? target.st.left : e.due > 0 ? e.due : "";
+    $("pay-date").value = today(); $("pay-ref").value = ""; $("pay-note").value = ""; $("payErr").hidden = true;
+    $("payDlg").showModal(); $("pay-amount").focus();
+  }
+  $("payForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault(); if (!S.db || !payFor) return;
+    const amount = r2(num($("pay-amount").value));
+    if (!(amount > 0)) { $("payErr").textContent = "Enter the amount."; $("payErr").hidden = false; return; }
+    const d = { partyId: payFor.p.id, type: payFor.p.type === "customer" ? "in" : "out", amount, date: $("pay-date").value || today(), mode: $("pay-mode").value, ref: $("pay-ref").value.trim(), docId: $("pay-doc").value || "", note: $("pay-note").value.trim(), createdAt: new Date().toISOString() };
+    $("paySave").disabled = true;
+    try { await col("payments").add(d); toast(`${rs(amount)} ${d.type === "in" ? "received from" : "paid to"} ${payFor.p.name}`); $("payDlg").close(); if (viewing && viewing.kind !== "party") viewing.refresh = true; }
+    catch (x) { writeFailed(x); }
+    finally { $("paySave").disabled = false; }
+  });
+
+  // Link sales and deliveries to saved parties, creating the party the first time.
+  async function ensureParty(type, id, data) {
+    const found = matchParty(type, id, data.gstin, data.name);
+    const clean = {}; Object.keys(data).forEach((k) => { if (data[k] !== "" && data[k] != null) clean[k] = data[k]; });
+    if (found) { try { await col("parties").doc(found).update(Object.assign(clean, { updatedAt: new Date().toISOString() })); } catch (x) {} return found; }
+    const nid = newId(type === "supplier" ? "s_" : "c_"), now = new Date().toISOString();
+    await col("parties").doc(nid).set(Object.assign({ name: "", type, contact: "", phone: "", email: "", gstin: "", state: "", address: "", city: "", pin: "", creditDays: 30, openingBalance: 0, notes: "" }, clean, { type, createdAt: now, updatedAt: now }));
+    return nid;
+  }
+  function custHint() {
+    const el = $("custHint"), id = matchParty("customer", sell.partyId, sell.customer.gstin, sell.customer.name), e = id && partyIdx.get(id);
+    if (!e) { el.hidden = !sell.customer.name.trim(); el.innerHTML = sell.customer.name.trim() ? `<span class="pill info">New customer · will be saved with the invoice</span>` : ""; return; }
+    el.hidden = false;
+    el.innerHTML = `<span class="pill ok">Saved customer</span> ${e.overdue > 0.5 ? `<span class="pill err">${rs(e.overdue)} overdue</span>` : e.due > 0.5 ? `<span class="pill warn">${rs(e.due)} outstanding</span>` : `<span class="pill neutral">No dues</span>`}`;
+  }
+  function supHint() {
+    const el = $("supHint"), name = (rcv.supplier || "").trim(), id = name && matchParty("supplier", rcv.partyId, "", name), e = id && partyIdx.get(id);
+    el.hidden = !name;
+    el.innerHTML = !name ? "" : e ? `<span class="pill ok">Saved supplier</span> ${e.due > 0.5 ? `<span class="pill warn">${rs(e.due)} to pay</span>` : ""}` : `<span class="pill info">New supplier · will be saved with this delivery</span>`;
+  }
+  $("c-name").addEventListener("change", () => {
+    const id = matchParty("customer", null, "", sell.customer.name), p = id && S.parties.find((x) => x.id === id);
+    if (p) { sell.customer = Object.assign({}, sell.customer, { name: p.name, phone: p.phone || sell.customer.phone, gstin: p.gstin || sell.customer.gstin, state: p.state || sell.customer.state, address: p.address || sell.customer.address, city: p.city || sell.customer.city, pin: p.pin || sell.customer.pin }); sell.partyId = p.id; saveSell(); fillSellForm(); renderSellTotals(); }
+    else sell.partyId = null;
+    custHint();
+  });
+  $("c-name").addEventListener("input", custHint);
+  $("rcv-supplier").addEventListener("change", () => { const id = matchParty("supplier", null, "", rcv.supplier); const p = id && S.parties.find((x) => x.id === id); if (p) { rcv.supplier = p.name; rcv.partyId = p.id; $("rcv-supplier").value = p.name; } else rcv.partyId = null; saveRcv(); supHint(); });
+  $("rcv-supplier").addEventListener("input", supHint);
 
   // ---------- RECORDS ----------
   function renderRecords() {
@@ -1774,14 +2117,14 @@
       $("recActions").innerHTML = S.canWrite && S.invoices.length ? `${pending.length ? `<button type="button" class="btn" id="recDl" ${ready.length ? "" : "disabled"}>Download e-invoice file for ${ready.length} pending</button>` : ""}<button type="button" class="btn" id="recImp">Import portal results</button>${pending.length > ready.length ? `<span class="muted small">${pending.length - ready.length} pending invoice${pending.length - ready.length === 1 ? " needs" : "s need"} details first. Open ${pending.length - ready.length === 1 ? "it" : "them"} to see what's missing.</span>` : ""}` : "";
       if ($("recDl")) $("recDl").onclick = () => downloadEinv(ready);
       if ($("recImp")) $("recImp").onclick = () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, null));
-      const badge = (d) => { const e = d.einv || {}; return [isB2B(d) ? (e.irn ? `<span class="pill ok">E-invoice ✓</span>` : `<span class="pill warn">IRN pending</span>`) : "", e.ewbNo ? `<span class="pill ok">E-way bill ✓</span>` : ewbNeeded(d) ? `<span class="pill warn">E-way bill pending</span>` : ""].join(" "); };
+      const badge = (d) => { const e = d.einv || {}; return [isB2B(d) ? (e.irn ? `<span class="pill ok">E-invoice ✓</span>` : `<span class="pill warn">IRN pending</span>`) : "", e.ewbNo ? `<span class="pill ok">E-way bill ✓</span>` : ewbNeeded(d) ? `<span class="pill warn">E-way bill pending</span>` : "", payPill(invPay.get(d.id))].join(" "); };
       el.innerHTML = list.length ? list.map((d) => `<button type="button" class="rrow" data-inv="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.customer && d.customer.name)}</b><div class="muted small">${(d.lines || []).length} items · ${(d.lines || []).reduce((a, l) => a + num(l.qty), 0)} units</div><div class="row" style="margin-top:4px">${badge(d)}</div></span><span class="when muted small">${fdate(d.date)}</span><span class="amt">${rs(d.totals ? d.totals.total : 0)}</span></button>`).join("")
         : `<div class="empty"><h3>${S.invoices.length ? "No invoices match" : "No invoices yet"}</h3><p>${S.invoices.length ? "Try another search." : "Invoices you create in Sell appear here."}</p></div>`;
     } else {
       $("recActions").innerHTML = "";
       const list = S.receipts.filter((d) => match(d, [d.no, d.supplier, d.ref])).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       el.innerHTML = list.length ? list.map((d) => { const u = (d.lines || []).reduce((a, l) => a + num(l.qty), 0), diff = (d.lines || []).some((l) => num(l.expected) && num(l.expected) !== num(l.qty));
-        return `<button type="button" class="rrow" data-grn="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.supplier || "Supplier not given")}</b><div class="muted small">${d.ref ? "Challan " + esc(d.ref) + " · " : ""}${(d.lines || []).length} products</div></span><span class="when muted small">${fdate(d.date)}</span><span>${diff ? `<span class="pill warn">Differences</span>` : ""} <b>${u}</b> <span class="muted small">units</span></span></button>`; }).join("")
+        return `<button type="button" class="rrow" data-grn="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.supplier || "Supplier not given")}</b><div class="muted small">${d.ref ? "Challan " + esc(d.ref) + " · " : ""}${(d.lines || []).length} products</div></span><span class="when muted small">${fdate(d.date)}</span><span>${diff ? `<span class="pill warn">Differences</span>` : ""} ${payPill(billPay.get(d.id))} <b>${u}</b> <span class="muted small">units</span></span></button>`; }).join("")
         : `<div class="empty"><h3>${S.receipts.length ? "No receipts match" : "Nothing received yet"}</h3><p>${S.receipts.length ? "Try another search." : "Deliveries you check in under Receive appear here."}</p></div>`;
     }
   }
@@ -1814,7 +2157,7 @@
 
   // ---------- Navigation & wiring ----------
   function setView(v) {
-    if (!["stock", "receive", "sell", "records", "settings"].includes(v)) v = "stock";
+    if (!["stock", "receive", "sell", "records", "parties", "settings"].includes(v)) v = "stock";
     view = v; store.set("view", v);
     document.querySelectorAll(".view").forEach((s) => (s.hidden = s.id !== "v-" + v));
     document.querySelectorAll("nav.tabs button").forEach((b) => { if (b.dataset.view === v) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
@@ -1836,7 +2179,7 @@
   $("stockQ").addEventListener("input", renderStock);
   $("stockLevel").addEventListener("change", renderStock);
   const stateOpts = `<option value="">Select state</option>` + STATES.map((s) => `<option>${esc(s)}</option>`).join("");
-  $("c-state").innerHTML = stateOpts; $("s-state").innerHTML = stateOpts;
+  $("c-state").innerHTML = stateOpts; $("s-state").innerHTML = stateOpts; $("pt-state").innerHTML = stateOpts;
   $("p-uqc").innerHTML = UQC.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
   $("catOptions").innerHTML = DEFAULT_CATS.map((c) => `<option value="${esc(c)}"></option>`).join("");
 
@@ -1850,10 +2193,20 @@
     if (view === "receive") renderReceive();
     if (view === "sell") renderSell();
     if (view === "records") renderRecords();
+    if (view === "parties") renderParties();
+    $("customerOptions").innerHTML = S.parties.filter((p) => p.type === "customer").map((p) => `<option value="${esc(p.name)}"></option>`).join("");
+    $("supplierOptions").innerHTML = S.parties.filter((p) => p.type === "supplier").map((p) => `<option value="${esc(p.name)}"></option>`).join("");
+    if (view === "sell") custHint();
+    if (view === "receive") supHint();
+    if ($("vDlg").open && viewing && viewing.kind === "party") showParty(viewing.id);
+    if ($("vDlg").open && viewing && viewing.refresh) {
+      const d = viewing.kind === "invoice" ? S.invoices.find((x) => x.id === viewing.id) : S.receipts.find((x) => x.id === viewing.id);
+      if (d) (viewing.kind === "invoice" ? showInvoice : showReceipt)(d);
+    }
     if ($("pDlg").open && editing) { if (prod(editing)) renderProductStock(); else $("pDlg").close(); }
   }
   let raf = 0;
-  const schedule = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; rebuild(); renderAll(); }); };
+  const schedule = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; rebuild(); rebuildParties(); renderAll(); }); };
 
   setView(view);
 
@@ -1873,7 +2226,7 @@
       S[prop] = snap.docs.map((d) => Object.assign({}, d.data(), { id: d.id }));
       S.ready[key] = true; live(); schedule();
     }, lost);
-    sub("products", "p", "products"); sub("receipts", "r", "receipts"); sub("invoices", "i", "invoices"); sub("adjustments", "a", "adjustments");
+    sub("products", "p", "products"); sub("receipts", "r", "receipts"); sub("invoices", "i", "invoices"); sub("adjustments", "a", "adjustments"); sub("parties", "pt", "parties"); sub("payments", "pm", "payments");
     db.doc("settings/business").onSnapshot((snap) => { S.settings = snap.exists ? snap.data() : {}; fillSettings(); schedule(); }, lost);
   })();
 })();
