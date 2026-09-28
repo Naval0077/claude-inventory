@@ -567,6 +567,7 @@
       <label class="field">GST unit code <span class="hint">for e-invoice</span><select id="p-uqc"></select></label>
       <label class="field">Selling price (₹)<input id="p-price" type="number" min="0" step="0.01"></label>
       <label class="field">Cost price (₹)<input id="p-cost" type="number" min="0" step="0.01"></label>
+      <label class="field">MRP (₹)<input id="p-mrp" type="number" min="0" step="0.01"></label>
       <label class="field">HSN code<input id="p-hsn" inputmode="numeric" maxlength="8" placeholder="841370"><span class="hint">6 or 8 digits, required on e-invoices</span></label>
       <label class="field">GST %<input id="p-gst" type="number" min="0" step="0.5"></label>
       <label class="field">Reorder when stock is at or below<input id="p-reorderAt" type="number" min="0" step="1"></label>
@@ -939,7 +940,7 @@
           <span class="p-main"><span class="p-name">${esc(p.name)}</span><span class="p-meta"><code>${esc(p.code || "no code")}</code>${p.brand || p.model ? " · " + esc([p.brand, p.model].filter(Boolean).join(" ")) : ""}${p.serialized ? " · serial tracked" : ""}</span></span>
           <span class="p-cat">${esc(p.category || "Other")}</span>
           <span class="p-spec">${esc(p.rating || "—")}<small>${esc(p.supply || "")}</small></span>
-          <span class="p-price">${num(p.price) ? rs(num(p.price)) : "—"}<small>GST ${num(p.gst ?? defGst())}%</small></span>
+          <span class="p-price">${num(p.price) ? rs(num(p.price)) : num(p.mrp) ? `<span class="muted">MRP ${rs(num(p.mrp))}</span>` : "—"}<small>${num(p.price) ? "" : "No selling price · "}GST ${num(p.gst ?? defGst())}%</small></span>
           <span class="p-stock"><span><b>${f0.format(qn)}</b> <span class="u">${esc(p.unit || "pcs")}</span></span><span class="pill ${l}">${LEVEL[l]}</span></span>
         </button>`;
       }).join("");
@@ -947,7 +948,7 @@
   const defGst = () => (S.settings.gst === "" || S.settings.gst == null ? 18 : num(S.settings.gst));
 
   // ---------- Product dialog ----------
-  const PF = ["name", "code", "barcode", "category", "brand", "model", "rating", "supply", "unit", "uqc", "price", "cost", "hsn", "gst", "reorderAt", "notes"];
+  const PF = ["name", "code", "barcode", "category", "brand", "model", "rating", "supply", "unit", "uqc", "price", "cost", "mrp", "hsn", "gst", "reorderAt", "notes"];
   let editing = null;
   async function openProduct(pid, preset) {
     editing = pid || null;
@@ -999,7 +1000,7 @@
     e.preventDefault(); if (!S.db) return;
     const d = {}; PF.forEach((k) => d[k] = $("p-" + k).value.trim());
     d.serialized = $("p-serialized").checked;
-    ["price", "cost", "gst", "reorderAt"].forEach((k) => d[k] = Math.max(0, num(d[k])));
+    ["price", "cost", "mrp", "gst", "reorderAt"].forEach((k) => d[k] = Math.max(0, num(d[k])));
     const err = (m) => { $("pErr").textContent = m; $("pErr").hidden = false; };
     if (!d.name) return err("Give the product a name.");
     if (!d.code) return err("Add a product code. It's what the barcode scanner matches on.");
@@ -1034,7 +1035,8 @@
     { k: "barcode", label: "Factory barcode", alias: ["barcode", "ean", "gtin", "upc"] },
     { k: "hsn", label: "HSN code", alias: ["hsn", "hsncode", "hsnsac", "sac"] },
     { k: "gst", label: "GST %", alias: ["gst", "gstrate", "gstpercent", "tax", "taxrate", "igst"] },
-    { k: "price", label: "Selling price", alias: ["price", "saleprice", "sellingprice", "rate", "mrp", "salerate"] },
+    { k: "price", label: "Selling price", alias: ["price", "saleprice", "sellingprice", "rate", "salerate"] },
+    { k: "mrp", label: "MRP", alias: ["mrp", "maxretailprice", "listprice"] },
     { k: "cost", label: "Cost price", alias: ["cost", "costprice", "purchaseprice", "unitcost", "purchaserate", "landedcost"] },
     { k: "unit", label: "Unit", alias: ["unit", "uom", "units"] },
     { k: "reorderAt", label: "Reorder level", alias: ["reorder", "reorderlevel", "minstock", "minimum", "minqty", "reorderat"] },
@@ -1097,7 +1099,7 @@
       seenCodes.add(K(code));
       const d = { code, name };
       ["category", "brand", "model", "rating", "supply", "barcode", "hsn", "unit"].forEach((k) => { const v = get(k); if (v) d[k] = v; });
-      ["gst", "price", "cost", "reorderAt"].forEach((k) => { const v = get(k); if (v !== "") d[k] = Math.max(0, num(String(v).replace("%", ""))); });
+      ["gst", "price", "cost", "mrp", "reorderAt"].forEach((k) => { const v = get(k); if (v !== "") d[k] = Math.max(0, num(String(v).replace("%", ""))); });
       if (d.category) { const m = DEFAULT_CATS.find((c) => c.toLowerCase() === d.category.toLowerCase()); if (m) d.category = m; }
       const sv = get("serialized").toLowerCase();
       if (sv) d.serialized = /^(y|yes|true|1)$/.test(sv);
