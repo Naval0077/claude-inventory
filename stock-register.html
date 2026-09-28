@@ -414,9 +414,17 @@
             <label class="field">Phone<input id="c-phone" inputmode="tel" placeholder="98xxxxxx10"></label>
             <label class="field">GSTIN <span class="hint">optional</span><input id="c-gstin" placeholder="22AAAAA0000A1Z5" style="text-transform:uppercase"></label>
             <label class="field">State (place of supply)<select id="c-state"></select></label>
-            <label class="field full">Billing address<textarea id="c-address" placeholder="Street, city, PIN"></textarea></label>
+            <label class="field full">Billing address<textarea id="c-address" placeholder="Building, street, area"></textarea></label>
+            <label class="field">City / town<input id="c-city" placeholder="Pune"></label>
+            <label class="field">PIN code<input id="c-pin" inputmode="numeric" maxlength="6" placeholder="411001"></label>
             <label class="field">Sales order no. <span class="hint">optional</span><input id="c-so" placeholder="SO-221"></label>
-            <label class="field">Vehicle no. <span class="hint">optional</span><input id="c-vehicle" placeholder="MH 12 AB 1234"></label>
+          </div>
+          <div class="section-t">Transport, for the e-way bill</div>
+          <div class="fields">
+            <label class="field">Vehicle no.<input id="c-vehicle" placeholder="MH12AB1234" style="text-transform:uppercase"></label>
+            <label class="field">Distance (km)<input id="c-distance" type="number" min="0" step="1" inputmode="numeric" placeholder="0 = portal works it out"></label>
+            <label class="field">Transporter name <span class="hint">optional</span><input id="c-transName" placeholder="ABC Roadways"></label>
+            <label class="field">Transporter GSTIN / ID <span class="hint">optional</span><input id="c-transId" style="text-transform:uppercase" placeholder="29AAAAA0000A1Z5"></label>
           </div>
         </div>
         <div class="card raised">
@@ -461,6 +469,7 @@
         <input class="input" id="recQ" type="search" placeholder="Search number, customer, supplier or serial" aria-label="Search records">
       </div>
     </div>
+    <div class="row" id="recActions"></div>
     <div class="rlist" id="rlist"></div>
   </section>
 
@@ -475,12 +484,14 @@
     <form class="card" id="setForm" style="max-width:760px">
       <div class="fields">
         <label class="field full">Business name<input id="s-name" placeholder="Your company name"></label>
-        <label class="field full">Address<textarea id="s-address" placeholder="Street, city, PIN"></textarea></label>
+        <label class="field full">Address<textarea id="s-address" placeholder="Building, street, area"></textarea></label>
+        <label class="field">City / town<input id="s-city" placeholder="Pune"></label>
+        <label class="field">PIN code<input id="s-pin" inputmode="numeric" maxlength="6" placeholder="411001"></label>
         <label class="field">GSTIN<input id="s-gstin" style="text-transform:uppercase" placeholder="27AAAAA0000A1Z5"></label>
         <label class="field">State<select id="s-state"></select></label>
         <label class="field">Phone<input id="s-phone"></label>
         <label class="field">Email<input id="s-email" type="email"></label>
-        <label class="field">Invoice prefix<input id="s-prefix" placeholder="INV"><span class="hint">Numbers look like INV/25-26/0001</span></label>
+        <label class="field">Invoice prefix<input id="s-prefix" placeholder="INV" maxlength="5"><span class="hint">Up to 5 letters or digits. Numbers look like INV/25-26/0001, which fits the e-invoice limit of 16 characters.</span></label>
         <label class="field">Default GST %<input id="s-gst" type="number" min="0" step="0.5" placeholder="18"></label>
         <label class="field full check"><input type="checkbox" id="s-incl"> <span>Selling prices already include GST<br><span class="hint">When ticked, tax is worked out backwards from the price.</span></span></label>
         <label class="field full">Bank details for payment<textarea id="s-bank" placeholder="Bank, account no., IFSC, UPI ID"></textarea></label>
@@ -513,9 +524,10 @@
       <label class="field">Rating<input id="p-rating" placeholder="7.5 HP / 5.5 kW, 540 Wp, 150 Ah"></label>
       <label class="field">Supply<input id="p-supply" placeholder="415 V · 3-phase"></label>
       <label class="field">Unit<input id="p-unit" placeholder="pcs"></label>
+      <label class="field">GST unit code <span class="hint">for e-invoice</span><select id="p-uqc"></select></label>
       <label class="field">Selling price (₹)<input id="p-price" type="number" min="0" step="0.01"></label>
       <label class="field">Cost price (₹)<input id="p-cost" type="number" min="0" step="0.01"></label>
-      <label class="field">HSN code<input id="p-hsn" placeholder="8413"></label>
+      <label class="field">HSN code<input id="p-hsn" inputmode="numeric" maxlength="8" placeholder="841370"><span class="hint">6 or 8 digits, required on e-invoices</span></label>
       <label class="field">GST %<input id="p-gst" type="number" min="0" step="0.5"></label>
       <label class="field">Reorder when stock is at or below<input id="p-reorderAt" type="number" min="0" step="1"></label>
       <label class="field full check"><input type="checkbox" id="p-serialized"> <span>Track serial numbers for this product<br><span class="hint">Each unit gets scanned in and out by its serial number.</span></span></label>
@@ -586,6 +598,7 @@
     bar: "https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js",
     xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
     zx: "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js",
+    qr: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js",
   };
   const libs = {};
   function lib(k) {
@@ -605,7 +618,7 @@
   let rcv = store.get("rcv", null) || freshRcv();
   let sell = store.get("sell", null) || freshSell();
   function freshRcv() { return { supplier: "", ref: "", date: today(), notes: "", lines: [], active: null }; }
-  function freshSell() { return { customer: { name: "", phone: "", gstin: "", state: "", address: "", so: "", vehicle: "" }, lines: [], active: null }; }
+  function freshSell() { return { customer: { name: "", phone: "", gstin: "", state: "", address: "", city: "", pin: "", so: "", vehicle: "", distance: "", transName: "", transId: "" }, lines: [], active: null }; }
   const saveRcv = () => store.set("rcv", rcv);
   const saveSell = () => store.set("sell", sell);
   const prod = (id) => pmap.get(id);
@@ -847,7 +860,7 @@
   const defGst = () => (S.settings.gst === "" || S.settings.gst == null ? 18 : num(S.settings.gst));
 
   // ---------- Product dialog ----------
-  const PF = ["name", "code", "barcode", "category", "brand", "model", "rating", "supply", "unit", "price", "cost", "hsn", "gst", "reorderAt", "notes"];
+  const PF = ["name", "code", "barcode", "category", "brand", "model", "rating", "supply", "unit", "uqc", "price", "cost", "hsn", "gst", "reorderAt", "notes"];
   let editing = null;
   async function openProduct(pid, preset) {
     editing = pid || null;
@@ -857,6 +870,7 @@
     PF.forEach((k) => { $("p-" + k).value = p ? (p[k] ?? "") : ""; });
     if (!p) { $("p-unit").value = "pcs"; $("p-gst").value = defGst(); $("p-reorderAt").value = 0; $("p-category").value = catFilter !== "All" ? catFilter : ""; }
     if (preset) Object.keys(preset).forEach((k) => { if ($("p-" + k)) $("p-" + k).value = preset[k]; });
+    $("p-uqc").value = (p && p.uqc) || uqcFor($("p-unit").value);
     $("p-serialized").checked = p ? !!p.serialized : true;
     $("pDelete").hidden = !p || !S.canWrite; $("pDelete").classList.remove("armed"); $("pDelete").textContent = "Delete product";
     $("pErr").hidden = true;
@@ -902,6 +916,7 @@
     const err = (m) => { $("pErr").textContent = m; $("pErr").hidden = false; };
     if (!d.name) return err("Give the product a name.");
     if (!d.code) return err("Add a product code. It's what the barcode scanner matches on.");
+    if (d.hsn && !HSN_RE.test(d.hsn)) return err("HSN code must be 6 or 8 digits for e-invoices, for example 841370.");
     const clash = S.products.find((x) => x.id !== editing && (K(x.code) === K(d.code) || (d.barcode && K(x.barcode) === K(d.barcode))));
     if (clash) return err(`That code is already used by “${clash.name}”.`);
     d.updatedAt = new Date().toISOString();
@@ -1007,6 +1022,7 @@
   function renderImportMap() {
     const plan = importPlan();
     const nNew = plan.out.filter((x) => !x.pid).length, nUpd = plan.out.length - nNew;
+    const badHsn = plan.out.filter((x) => !HSN_RE.test(String(x.d.hsn || ""))).length;
     const hasOpening = imp.map.includes("openingQty");
     const openingTotal = plan.out.reduce((a, x) => a + x.opening, 0);
     const missing = ["code", "name"].filter((k) => !imp.map.includes(k)).map((k) => FIELDS.find((f) => f.k === k).label);
@@ -1018,7 +1034,7 @@
       ${imp.rows.length > 6 ? `<p class="hint">Showing the first 6 of ${imp.rows.length} rows.</p>` : ""}
       ${missing.length ? `<p class="err">Match a column to ${missing.join(" and ")} to continue.</p>` : `
       <div class="card" style="background:var(--surface-2);border:0;gap:10px">
-        <div class="row"><span class="pill ok">${nNew} new products</span><span class="pill neutral">${nUpd} to update</span>${plan.skipped.length ? `<span class="pill warn">${plan.skipped.length} rows skipped (missing code or name, or duplicate code)</span>` : ""}</div>
+        <div class="row"><span class="pill ok">${nNew} new products</span><span class="pill neutral">${nUpd} to update</span>${plan.skipped.length ? `<span class="pill warn">${plan.skipped.length} rows skipped (missing code or name, or duplicate code)</span>` : ""}${badHsn ? `<span class="pill warn">${badHsn} without a 6 or 8 digit HSN code; add it before e-invoicing</span>` : ""}</div>
         ${imp.map.includes("serialized") ? "" : `<label class="check"><input type="checkbox" id="iAutoSerial" ${imp.autoSerial ? "checked" : ""}><span>Track serial numbers for new pumps, motors, panels, inverters, batteries and controllers</span></label>`}
         ${hasOpening && openingTotal ? `<p class="small muted">Opening stock of ${f0.format(openingTotal)} units will be added. Serial numbers for these units can be scanned in later; sales will accept serials for them until they run out.</p>` : ""}
       </div>`}
@@ -1043,6 +1059,7 @@
           else {
             const d = Object.assign({ category: "", brand: "", model: "", rating: "", supply: "", barcode: "", hsn: "", unit: "pcs", gst: defGst(), price: 0, cost: 0, reorderAt: 0, notes: "" }, item.d);
             if (d.serialized == null) d.serialized = imp.autoSerial && SERIAL_CATS.includes(String(d.category).toLowerCase());
+            d.uqc = uqcFor(d.unit);
             d.createdAt = now; d.updatedAt = now;
             item.pid = newId("p_");
             await col("products").doc(item.pid).set(d);
@@ -1231,7 +1248,7 @@
     return { lines: out, totals: { taxable, cgst: intra ? r2(tax / 2) : 0, sgst: intra ? r2(tax - r2(tax / 2)) : 0, igst: intra ? 0 : tax, tax, roundOff: r2(total - sub), total } };
   }
   function draftInvoiceLines() {
-    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", qty: sellCount(l), rate: num(l.rate), gst: num(p.gst ?? defGst()), serials: p.serialized ? l.serials.slice() : [] }; });
+    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", uqc: p.uqc || uqcFor(p.unit), qty: sellCount(l), rate: num(l.rate), gst: num(p.gst ?? defGst()), serials: p.serialized ? l.serials.slice() : [] }; });
   }
   function renderSell() {
     activeHint("sell", sell.active, () => { sell.active = null; saveSell(); renderSell(); $("sell-scan").focus(); });
@@ -1273,6 +1290,9 @@
         ${short.map((l) => `<span class="pill warn">${esc(prod(l.pid).name)}: ${sellCount(l)} of ${num(l.ordered)} loaded</span>`).join("")}
         ${noRate.map((l) => `<span class="pill warn">${esc(l.name)} has no rate</span>`).join("")}
         ${!intra ? `<span class="pill info">Interstate sale: IGST applies</span>` : ""}
+        ${t.total > 50000 && !sell.customer.vehicle.trim() && !sell.customer.transId.trim() ? `<span class="pill warn">Over ₹50,000: add the vehicle number for the e-way bill</span>` : ""}
+        ${sell.customer.gstin.trim() && !GSTIN_RE.test(K(sell.customer.gstin)) ? `<span class="pill warn">Customer GSTIN should be 15 characters</span>` : ""}
+        ${GSTIN_RE.test(K(sell.customer.gstin)) && !/^\d{6}$/.test(sell.customer.pin.trim()) ? `<span class="pill warn">Add the customer's PIN code for the e-invoice</span>` : ""}
       </div>`;
     sellArmed = false; $("sellCreate").textContent = "Create invoice";
   }
@@ -1299,8 +1319,12 @@
     else return;
     saveSell(); setTimeout(renderSell, 0);
   });
-  const CF = ["name", "phone", "gstin", "state", "address", "so", "vehicle"];
-  CF.forEach((k) => $("c-" + k).addEventListener("input", (e) => { sell.customer[k] = k === "gstin" ? e.target.value.toUpperCase() : e.target.value; saveSell(); renderSellTotals(); }));
+  const CF = ["name", "phone", "gstin", "state", "address", "city", "pin", "so", "vehicle", "distance", "transName", "transId"];
+  CF.forEach((k) => $("c-" + k).addEventListener("input", (e) => {
+    sell.customer[k] = ["gstin", "vehicle", "transId"].includes(k) ? e.target.value.toUpperCase() : e.target.value;
+    if (k === "gstin" && !sell.customer.state) { const st = stateFromGstin(sell.customer.gstin); if (st) { sell.customer.state = st; $("c-state").value = st; } }
+    saveSell(); renderSellTotals();
+  }));
   function fillSellForm() { CF.forEach((k) => ($("c-" + k).value = sell.customer[k] || "")); }
   const addSellPick = () => { const pid = pickProduct("sellPick"); if (!pid) return; sellLine(pid); saveSell(); renderSell(); };
   $("sellPickBtn").onclick = addSellPick;
@@ -1319,8 +1343,12 @@
     const seq = 1 + S.invoices.filter((i) => i.fy === fy && i.prefix === prefix).reduce((m, i) => Math.max(m, num(i.seq)), 0);
     const intra = isIntra(), incl = !!S.settings.pricesIncludeGst;
     const c = calc(lines, incl, intra);
-    const seller = {}; ["name", "address", "gstin", "state", "phone", "email", "bank", "terms"].forEach((k) => seller[k] = S.settings[k] || "");
-    const doc = { no: `${prefix}/${fy}/${String(seq).padStart(4, "0")}`, prefix, fy, seq, date, createdAt: new Date().toISOString(), customer: Object.assign({}, sell.customer, { name: sell.customer.name.trim() }), seller, intra, pricesIncludeGst: incl, lines: c.lines, totals: c.totals };
+    const seller = {}; ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "bank", "terms"].forEach((k) => seller[k] = S.settings[k] || "");
+    const cu = sell.customer;
+    const transport = { vehicle: K(cu.vehicle).replace(/[^A-Z0-9]/g, ""), distance: Math.max(0, Math.round(num(cu.distance))), transName: (cu.transName || "").trim(), transId: K(cu.transId) };
+    const customer = { name: cu.name.trim(), phone: cu.phone || "", gstin: K(cu.gstin), state: cu.state || "", address: (cu.address || "").trim(), city: (cu.city || "").trim(), pin: (cu.pin || "").trim(), so: cu.so || "", vehicle: transport.vehicle };
+    const doc = { no: `${prefix}/${fy}/${String(seq).padStart(4, "0")}`, prefix, fy, seq, date, createdAt: new Date().toISOString(), customer, transport, seller, intra, pricesIncludeGst: incl, lines: c.lines, totals: c.totals };
+    if (doc.no.length > 16) { toast("The invoice prefix is too long for e-invoicing. Use up to 5 characters in Settings."); return; }
     $("sellCreate").disabled = true;
     try {
       const ref = await col("invoices").add(doc); doc.id = ref.id;
@@ -1347,16 +1375,150 @@
     return "Rupees " + w(rupees) + (paise ? " and " + two(paise) + " Paise" : "") + " Only";
   }
 
+  // ---------- E-invoice & e-way bill ----------
+  // Uses the IRP's own schema (v1.1) and response fields, so the portal upload used today and a
+  // direct connection added later share einvPayload() and applyIrpResult().
+  const STATE_CODES = { "Jammu & Kashmir": "01", "Himachal Pradesh": "02", "Punjab": "03", "Chandigarh": "04", "Uttarakhand": "05", "Haryana": "06", "Delhi": "07", "Rajasthan": "08", "Uttar Pradesh": "09", "Bihar": "10", "Sikkim": "11", "Arunachal Pradesh": "12", "Nagaland": "13", "Manipur": "14", "Mizoram": "15", "Tripura": "16", "Meghalaya": "17", "Assam": "18", "West Bengal": "19", "Jharkhand": "20", "Odisha": "21", "Chhattisgarh": "22", "Madhya Pradesh": "23", "Gujarat": "24", "Dadra & Nagar Haveli and Daman & Diu": "26", "Maharashtra": "27", "Karnataka": "29", "Goa": "30", "Lakshadweep": "31", "Kerala": "32", "Tamil Nadu": "33", "Puducherry": "34", "Andaman & Nicobar Islands": "35", "Telangana": "36", "Andhra Pradesh": "37", "Ladakh": "38" };
+  const stateCode = (name) => STATE_CODES[name] || "";
+  const stateFromGstin = (g) => { const c = String(g || "").slice(0, 2); return Object.keys(STATE_CODES).find((k) => STATE_CODES[k] === c) || ""; };
+  const UQC = [["NOS", "Numbers (NOS)"], ["PCS", "Pieces (PCS)"], ["SET", "Sets (SET)"], ["PRS", "Pairs (PRS)"], ["MTR", "Metres (MTR)"], ["KGS", "Kilograms (KGS)"], ["LTR", "Litres (LTR)"], ["BOX", "Boxes (BOX)"], ["ROL", "Rolls (ROL)"], ["OTH", "Others (OTH)"]];
+  function uqcFor(unit) {
+    const u = String(unit || "").toLowerCase().trim();
+    if (/^(pc|pcs|piece|pieces|nos|no|unit|units)?$/.test(u)) return "NOS";
+    if (/^(m|mtr|mtrs|meter|meters|metre|metres)$/.test(u)) return "MTR";
+    if (/^(kg|kgs|kilo)/.test(u)) return "KGS";
+    if (/^(set|sets|kit|kits)$/.test(u)) return "SET";
+    if (/^(pair|pairs|prs)$/.test(u)) return "PRS";
+    if (/^(l|ltr|ltrs|litre|litres|liter|liters)$/.test(u)) return "LTR";
+    if (/^box/.test(u)) return "BOX";
+    if (/^roll/.test(u)) return "ROL";
+    return "OTH";
+  }
+  const GSTIN_RE = /^\d{2}[A-Z0-9]{13}$/;
+  const HSN_RE = /^\d{6}(\d{2})?$/;
+  const dmy = (d) => { const [y, m, dd] = String(d).slice(0, 10).split("-"); return `${dd}/${m}/${y}`; };
+  const isB2B = (inv) => GSTIN_RE.test(K(inv.customer && inv.customer.gstin));
+  const ewbNeeded = (inv) => num(inv.totals && inv.totals.total) > 50000;
+  function sellerOf(inv) { const s = Object.assign({}, inv.seller || {}); Object.keys(S.settings).forEach((k) => { if (!s[k]) s[k] = S.settings[k]; }); return s; }
+  const transportOf = (inv) => Object.assign({ vehicle: (inv.customer && inv.customer.vehicle) || "", distance: 0, transName: "", transId: "" }, inv.transport || {});
+
+  function einvProblems(inv) {
+    const s = sellerOf(inv), c = inv.customer || {}, out = [];
+    if (!GSTIN_RE.test(K(s.gstin))) out.push("Add your 15-character GSTIN in Settings.");
+    if (!String(s.address || "").trim()) out.push("Add your address in Settings.");
+    if (String(s.city || "").trim().length < 3) out.push("Add your city in Settings.");
+    if (!/^\d{6}$/.test(String(s.pin || ""))) out.push("Add your 6-digit PIN code in Settings.");
+    if (!stateCode(s.state)) out.push("Choose your state in Settings.");
+    if (!isB2B(inv)) out.push("The customer has no valid GSTIN, so this is a B2C sale and doesn't need an e-invoice.");
+    if (!String(c.address || "").trim()) out.push("Add the customer's address below.");
+    if (String(c.city || "").trim().length < 3) out.push("Add the customer's city below.");
+    if (!/^\d{6}$/.test(String(c.pin || ""))) out.push("Add the customer's 6-digit PIN code below.");
+    if (!stateCode(c.state || stateFromGstin(c.gstin))) out.push("The customer's state is missing.");
+    if (!/^[A-Za-z1-9][A-Za-z0-9\/-]{0,15}$/.test(inv.no || "")) out.push("The invoice number doesn't fit the e-invoice format (16 characters, letters, digits, / and -).");
+    const noHsn = (inv.lines || []).filter((l) => !HSN_RE.test(String(l.hsn || "")));
+    if (noHsn.length) out.push(`Add a 6 or 8 digit HSN code to: ${noHsn.map((l) => l.name).join(", ")}. Edit the product in Stock, then tap “Refresh HSN and units from catalogue” below.`);
+    return out;
+  }
+  function einvPayload(inv) {
+    const s = sellerOf(inv), c = inv.customer || {}, tr = transportOf(inv), intra = !!inv.intra;
+    const clean = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
+    const phone = (v) => { const d = String(v || "").replace(/\D/g, "").slice(-12); return d.length >= 6 ? d : undefined; };
+    const buyerSt = stateCode(c.state || stateFromGstin(c.gstin));
+    let ass = 0, cg = 0, sg = 0, ig = 0;
+    const items = (inv.lines || []).map((l, i) => {
+      const qty = num(l.qty), a = r2(num(l.taxable)), tax = r2(num(l.tax));
+      const lc = intra ? r2(tax / 2) : 0, ls = intra ? r2(tax - lc) : 0, li = intra ? 0 : tax;
+      ass += a; cg += lc; sg += ls; ig += li;
+      return { SlNo: String(i + 1), PrdDesc: clean(l.name + (l.rating && !String(l.name).includes(l.rating) ? " " + l.rating : ""), 300), IsServc: "N", HsnCd: String(l.hsn || ""), Qty: qty, Unit: l.uqc || uqcFor(l.unit), UnitPrice: qty ? Math.round((a / qty) * 1000) / 1000 : 0, TotAmt: a, Discount: 0, AssAmt: a, GstRt: num(l.gst), IgstAmt: li, CgstAmt: lc, SgstAmt: ls, CesRt: 0, CesAmt: 0, CesNonAdvlAmt: 0, StateCesRt: 0, StateCesAmt: 0, StateCesNonAdvlAmt: 0, OthChrg: 0, TotItemVal: r2(a + tax) };
+    });
+    ass = r2(ass); cg = r2(cg); sg = r2(sg); ig = r2(ig);
+    const total = num(inv.totals && inv.totals.total) || Math.round(ass + cg + sg + ig);
+    const p = {
+      Version: "1.1",
+      TranDtls: { TaxSch: "GST", SupTyp: "B2B", RegRev: "N", IgstOnIntra: "N" },
+      DocDtls: { Typ: "INV", No: inv.no, Dt: dmy(inv.date) },
+      SellerDtls: { Gstin: K(s.gstin), LglNm: clean(s.name, 100), Addr1: clean(s.address, 100), Loc: clean(s.city, 50), Pin: num(s.pin), Stcd: stateCode(s.state), Ph: phone(s.phone), Em: s.email ? clean(s.email, 100) : undefined },
+      BuyerDtls: { Gstin: K(c.gstin), LglNm: clean(c.name, 100), Pos: buyerSt, Addr1: clean(c.address, 100), Loc: clean(c.city, 50), Pin: num(c.pin), Stcd: buyerSt, Ph: phone(c.phone) },
+      ItemList: items,
+      ValDtls: { AssVal: ass, CgstVal: cg, SgstVal: sg, IgstVal: ig, CesVal: 0, StCesVal: 0, Discount: 0, OthChrg: 0, RndOffAmt: r2(total - (ass + cg + sg + ig)), TotInvVal: total },
+    };
+    if (tr.vehicle || tr.transId) p.EwbDtls = { TransId: tr.transId || undefined, TransName: tr.transName ? clean(tr.transName, 100) : undefined, Distance: Math.round(num(tr.distance)), TransMode: tr.vehicle ? "1" : undefined, VehNo: tr.vehicle || undefined, VehType: tr.vehicle ? "R" : undefined };
+    return p;
+  }
+  // Pull the IRP's result fields out of any row shape: the API response, the portal's JSON or its Excel/CSV download.
+  const RES_KEYS = { irn: ["irn"], ackNo: ["ackno", "acknumber", "acknowledgementno", "acknowledgementnumber"], ackDt: ["ackdt", "ackdate", "acknowledgementdate"], qr: ["signedqrcode", "signedqr", "qrcode", "qrcodedata"], ewbNo: ["ewbno", "ewaybillno", "ewbnumber", "ewaybillnumber"], ewbDt: ["ewbdt", "ewbdate", "ewaybilldate"], ewbValid: ["ewbvalidtill", "validtill", "validupto", "ewbvalidupto", "ewbvaliduntil"], docNo: ["docno", "documentno", "invoiceno", "docnumber", "documentnumber", "invno"] };
+  function readResult(row) {
+    const out = {}, keys = Object.keys(row || {});
+    for (const [f, al] of Object.entries(RES_KEYS)) { const k = keys.find((x) => al.includes(normH(x))); if (k != null && String(row[k]).trim() && String(row[k]) !== "null") out[f] = String(row[k]).trim(); }
+    if (!out.docNo && row && row.DocDtls && row.DocDtls.No) out.docNo = String(row.DocDtls.No);
+    return out;
+  }
+  function collectRows(x, acc) {
+    if (Array.isArray(x)) x.forEach((y) => collectRows(y, acc));
+    else if (x && typeof x === "object") {
+      const r = readResult(x);
+      if (r.irn || r.ewbNo) acc.push(r); else Object.values(x).forEach((y) => { if (y && typeof y === "object") collectRows(y, acc); else if (typeof y === "string" && /^\s*[\[{]/.test(y)) { try { collectRows(JSON.parse(y), acc); } catch (e) {} } });
+    }
+    return acc;
+  }
+  async function parseResultFile(f) {
+    if (/\.json$/i.test(f.name) || f.type === "application/json") return collectRows(JSON.parse(await f.text()), []);
+    await lib("xlsx");
+    const wb = window.XLSX.read(await f.arrayBuffer(), { type: "array" }), acc = [];
+    wb.SheetNames.forEach((n) => {
+      const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: "", raw: false });
+      const h = rows.findIndex((r) => r.some((c) => RES_KEYS.irn.includes(normH(c)) || RES_KEYS.ewbNo.includes(normH(c))));
+      if (h < 0) return;
+      rows.slice(h + 1).forEach((r) => { const o = {}; rows[h].forEach((k, i) => (o[k] = r[i])); const x = readResult(o); if (x.irn || x.ewbNo) acc.push(x); });
+    });
+    return acc;
+  }
+  async function applyIrpResult(inv, r, source) {
+    const cur = inv.einv || {}, e = Object.assign({}, cur);
+    ["irn", "ackNo", "ackDt", "qr", "ewbNo", "ewbDt", "ewbValid"].forEach((k) => { if (r[k]) e[k] = r[k]; });
+    e.source = source; e.updatedAt = new Date().toISOString();
+    await col("invoices").doc(inv.id).update({ einv: e });
+    inv.einv = e;
+  }
+  async function importResults(f, only) {
+    let rows;
+    try { rows = await parseResultFile(f); } catch (e) { toast("Couldn't read that file. Use the JSON or Excel file the portal gave you."); return; }
+    if (!rows.length) { toast("No IRN or e-way bill numbers found in that file."); return; }
+    let done = 0, unmatched = 0;
+    for (const r of rows) {
+      let inv = r.docNo ? S.invoices.find((i) => K(i.no) === K(r.docNo)) : null;
+      if (!inv && only && rows.length === 1) inv = only;
+      if (!inv || (only && inv.id !== only.id && rows.length === 1)) { unmatched++; continue; }
+      try { await applyIrpResult(inv, r, "portal-file"); done++; } catch (e) { writeFailed(e); return; }
+    }
+    toast(`${done} invoice${done === 1 ? "" : "s"} updated${unmatched ? `, ${unmatched} row${unmatched === 1 ? "" : "s"} didn't match an invoice number` : ""}`);
+    if (only) { const fresh = S.invoices.find((i) => i.id === only.id) || only; showInvoice(fresh); }
+  }
+  function pickFile(accept, fn) { const i = document.createElement("input"); i.type = "file"; i.accept = accept; i.onchange = () => i.files[0] && fn(i.files[0]); i.click(); }
+  const einvFileName = (list) => list.length === 1 ? `e-invoice-${list[0].no.replace(/[\/\\]/g, "-")}.json` : `e-invoices-${today()}.json`;
+  async function downloadEinv(list) { await saveFile(einvFileName(list), JSON.stringify(list.map(einvPayload), null, 2)); }
+
+  async function qrDataUrl(text) {
+    await lib("qr");
+    const q = window.qrcode(0, "L"); q.addData(text); q.make();
+    const n = q.getModuleCount(), sc = 4, m = 4, cv = document.createElement("canvas");
+    cv.width = cv.height = (n + 2 * m) * sc;
+    const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = "#000";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + m) * sc, (r + m) * sc, sc, sc);
+    return cv.toDataURL("image/png");
+  }
+
   // ---------- Invoice view + PDF ----------
   function invoiceHtml(inv) {
-    const s = inv.seller || {}, c = inv.customer || {}, t = inv.totals || {};
+    const s = sellerOf(inv), c = inv.customer || {}, t = inv.totals || {}, e = inv.einv || {};
     return `<div class="paper-wrap"><div class="paper" style="min-width:560px">
       <div class="top">
-        <div><h4>${esc(s.name || "Your business name")}</h4><div class="muted" style="white-space:pre-line">${esc(s.address || "")}</div>
+        <div><h4>${esc(s.name || "Your business name")}</h4><div class="muted" style="white-space:pre-line">${esc([s.address, [s.city, s.pin].filter(Boolean).join(" - ")].filter(Boolean).join("\n"))}</div>
           <div class="muted">${s.gstin ? "GSTIN " + esc(s.gstin) : ""}${s.state ? " · " + esc(s.state) : ""}${s.phone ? " · " + esc(s.phone) : ""}</div></div>
-        <div style="text-align:right"><div class="title">Tax invoice</div><div style="font:600 15px var(--mono)">${esc(inv.no)}</div><div class="muted">${fdate(inv.date)}</div>${c.so ? `<div class="muted">Order ${esc(c.so)}</div>` : ""}${c.vehicle ? `<div class="muted">Vehicle ${esc(c.vehicle)}</div>` : ""}</div>
+        <div style="text-align:right"><div class="title">Tax invoice</div><div style="font:600 15px var(--mono)">${esc(inv.no)}</div><div class="muted">${fdate(inv.date)}</div>${c.so ? `<div class="muted">Order ${esc(c.so)}</div>` : ""}${transportOf(inv).vehicle ? `<div class="muted">Vehicle ${esc(transportOf(inv).vehicle)}</div>` : ""}${e.ewbNo ? `<div class="muted">E-way bill ${esc(e.ewbNo)}</div>` : ""}</div>
       </div>
-      <div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Bill to</div><b>${esc(c.name)}</b><div class="muted" style="white-space:pre-line">${esc(c.address || "")}</div>
+      ${e.irn ? `<div style="display:flex;gap:14px;align-items:center;border:1px solid var(--paper-line);border-radius:8px;padding:10px"><img id="irnQr" alt="Signed e-invoice QR code" style="width:96px;height:96px;flex:none;background:#fff"><div style="min-width:0;font-size:12px"><div><b>IRN</b> <span style="font-family:var(--mono);word-break:break-all">${esc(e.irn)}</span></div><div class="muted">Ack no. ${esc(e.ackNo || "—")} · Ack date ${esc(e.ackDt || "—")}</div></div></div>` : ""}
+      <div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Bill to</div><b>${esc(c.name)}</b><div class="muted" style="white-space:pre-line">${esc([c.address, [c.city, c.pin].filter(Boolean).join(" - ")].filter(Boolean).join("\n"))}</div>
         <div class="muted">${c.gstin ? "GSTIN " + esc(c.gstin) + " · " : ""}${c.phone ? esc(c.phone) + " · " : ""}Place of supply: ${esc(c.state || s.state || "—")}</div></div>
       <table><thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Amount</th></tr></thead>
       <tbody>${(inv.lines || []).map((l, i) => `<tr><td>${i + 1}</td><td><b>${esc(l.name)}</b><div class="muted">${esc(l.code)}${l.rating ? " · " + esc(l.rating) : ""}</div>${l.serials && l.serials.length ? `<div class="sns">S/N: ${l.serials.map(esc).join(", ")}</div>` : ""}</td><td>${esc(l.hsn || "")}</td><td class="num">${l.qty} ${esc(l.unit || "")}</td><td class="num">${f2.format(l.rate)}</td><td class="num">${f2.format(l.taxable)}</td><td class="num">${l.gst}%<div class="muted">${f2.format(l.tax)}</div></td><td class="num">${f2.format(l.amount)}</td></tr>`).join("")}</tbody></table>
@@ -1372,37 +1534,128 @@
       <div style="text-align:right;margin-top:18px">For ${esc(s.name || "")}<br><br><span class="muted">Authorised signatory</span></div>
     </div></div>`;
   }
+  function einvPanel(inv) {
+    const e = inv.einv || {}, b2b = isB2B(inv), need = ewbNeeded(inv), tr = transportOf(inv), c = inv.customer || {};
+    const problems = b2b ? einvProblems(inv) : [];
+    const status = [
+      b2b ? (e.irn ? `<span class="pill ok">✓ E-invoice registered</span>` : `<span class="pill warn">E-invoice not registered yet</span>`) : `<span class="pill neutral">B2C sale: no e-invoice needed</span>`,
+      e.ewbNo ? `<span class="pill ok">✓ E-way bill ${esc(e.ewbNo)}</span>` : need ? `<span class="pill warn">E-way bill needed (over ₹50,000)</span>` : `<span class="pill neutral">E-way bill optional (₹50,000 or less)</span>`,
+    ].join(" ");
+    const editable = !e.irn && S.canWrite;
+    return `<div class="card" style="background:var(--surface-2);border:0">
+      <div class="card-head"><h3>E-invoice and e-way bill</h3><div class="row">${status}</div></div>
+      ${e.irn ? `<p class="small">Registered${e.source === "manual" ? " (entered by hand)" : ""}. IRN, acknowledgement and QR code print on the invoice${e.ewbNo ? ", and the e-way bill prints on page 2" : ""}.</p>` : ""}
+      ${b2b && !e.irn ? `
+        <ol class="small" style="margin:0;padding-left:20px;display:grid;gap:4px">
+          <li>Download the e-invoice file${tr.vehicle || tr.transId ? " (it includes the transport details, so the portal creates the e-way bill too)" : ""}.</li>
+          <li>On <b>einvoice1.gst.gov.in</b>, sign in and open <b>e-Invoice → Bulk upload</b>, then upload the file.</li>
+          <li>Download the result from the portal and import it here. The IRN, QR code and e-way bill number are filled in automatically.</li>
+        </ol>
+        ${problems.length ? `<div class="warnlist">${problems.map((x) => `<span class="pill warn" style="white-space:normal">${esc(x)}</span>`).join("")}</div>` : ""}` : ""}
+      ${!b2b && need && !e.ewbNo ? `<p class="small">Create the e-way bill on <b>ewaybillgst.gov.in</b> (e-Waybill → Generate new), then enter its number below so it prints with the invoice.</p>` : ""}
+      ${editable ? `<div class="section-t">Customer and transport</div>
+        <div class="fields three">
+          <label class="field">Customer city<input id="ei-city" value="${esc(c.city || "")}"></label>
+          <label class="field">Customer PIN<input id="ei-pin" maxlength="6" inputmode="numeric" value="${esc(c.pin || "")}"></label>
+          <label class="field">Customer GSTIN<input id="ei-gstin" style="text-transform:uppercase" value="${esc(c.gstin || "")}"></label>
+          <label class="field full">Customer address<input id="ei-address" value="${esc(c.address || "")}"></label>
+          <label class="field">Vehicle no.<input id="ei-vehicle" style="text-transform:uppercase" value="${esc(tr.vehicle || "")}"></label>
+          <label class="field">Distance (km)<input id="ei-distance" type="number" min="0" value="${esc(tr.distance || "")}" placeholder="0 = automatic"></label>
+          <label class="field">Transporter GSTIN / ID<input id="ei-transId" style="text-transform:uppercase" value="${esc(tr.transId || "")}"></label>
+          <label class="field full">Transporter name<input id="ei-transName" value="${esc(tr.transName || "")}"></label>
+        </div>
+        <div class="row"><button type="button" class="btn" id="eiSave">Save changes</button><button type="button" class="btn ghost" id="eiRefresh">Refresh HSN and units from catalogue</button></div>` : ""}
+      <div class="row">
+        ${b2b && !e.irn ? `<button type="button" class="btn primary" id="eiDownload" ${problems.length ? "disabled" : ""}>Download e-invoice file</button>` : ""}
+        ${S.canWrite ? `<button type="button" class="btn" id="eiImport">Import portal result</button>` : ""}
+        ${S.canWrite ? `<button type="button" class="btn ghost" id="eiManualBtn">Enter numbers by hand</button>` : ""}
+      </div>
+      <div id="eiManual" hidden style="display:grid;gap:12px">
+        <div class="fields">
+          ${b2b ? `<label class="field full">IRN<input id="em-irn" value="${esc(e.irn || "")}" placeholder="64-character IRN"></label>
+          <label class="field">Ack no.<input id="em-ackNo" value="${esc(e.ackNo || "")}"></label>
+          <label class="field">Ack date<input id="em-ackDt" value="${esc(e.ackDt || "")}" placeholder="2026-09-28 11:45:00"></label>
+          <label class="field full">Signed QR code <span class="hint">the long text the portal gives, not an image</span><textarea id="em-qr">${esc(e.qr || "")}</textarea></label>` : ""}
+          <label class="field">E-way bill no.<input id="em-ewbNo" value="${esc(e.ewbNo || "")}" inputmode="numeric" placeholder="12 digits"></label>
+          <label class="field">E-way bill date<input id="em-ewbDt" value="${esc(e.ewbDt || "")}" placeholder="28/09/2026 11:45"></label>
+          <label class="field">Valid until<input id="em-ewbValid" value="${esc(e.ewbValid || "")}" placeholder="29/09/2026 23:59"></label>
+        </div>
+        <div class="row"><button type="button" class="btn primary" id="emSave">Save numbers</button>${e.irn || e.ewbNo ? `<button type="button" class="btn danger" id="emClear">Remove these numbers</button>` : ""}</div>
+      </div>
+    </div>`;
+  }
   function showInvoice(inv) {
     $("vTitle").textContent = "Invoice " + inv.no;
     $("vSub").textContent = `${inv.customer?.name || ""} · ${fdate(inv.date)} · ${rs(inv.totals?.total || 0)}`;
-    $("vBody").innerHTML = invoiceHtml(inv) + (!(inv.seller && inv.seller.name) ? `<p class="pill warn">Add your business name and GSTIN in Settings so they print on new invoices.</p>` : "");
-    $("vFoot").innerHTML = `<span class="muted small">${(inv.lines || []).reduce((a, l) => a + (l.serials || []).length, 0)} serial numbers recorded</span><div class="row"><button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="vPdf">Download PDF</button></div>`;
+    $("vBody").innerHTML = einvPanel(inv) + invoiceHtml(inv) + (!(sellerOf(inv).name) ? `<p class="pill warn">Add your business name and GSTIN in Settings so they print on invoices.</p>` : "");
+    const e = inv.einv || {};
+    $("vFoot").innerHTML = `<span class="muted small">${e.ewbNo ? "PDF includes the e-way bill on page 2" : `${(inv.lines || []).reduce((a, l) => a + (l.serials || []).length, 0)} serial numbers recorded`}</span><div class="row"><button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="vPdf">Download PDF</button></div>`;
     $("vPdf").onclick = () => invoicePdf(inv);
+    if (e.qr) qrDataUrl(e.qr).then((u) => { const im = $("irnQr"); if (im) im.src = u; }).catch(() => {});
+    const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+    on("eiDownload", () => downloadEinv([inv]));
+    on("eiImport", () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, inv)));
+    on("eiManualBtn", () => { $("eiManual").hidden = !$("eiManual").hidden; });
+    on("eiSave", async () => {
+      const v = (id) => $(id).value.trim();
+      const customer = Object.assign({}, inv.customer, { city: v("ei-city"), pin: v("ei-pin"), gstin: K(v("ei-gstin")), address: v("ei-address") });
+      if (!customer.state) customer.state = stateFromGstin(customer.gstin);
+      const transport = { vehicle: K(v("ei-vehicle")).replace(/[^A-Z0-9]/g, ""), distance: Math.max(0, Math.round(num(v("ei-distance")))), transName: v("ei-transName"), transId: K(v("ei-transId")) };
+      customer.vehicle = transport.vehicle;
+      try { await col("invoices").doc(inv.id).update({ customer, transport }); inv.customer = customer; inv.transport = transport; toast("Saved"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    on("eiRefresh", async () => {
+      const lines = (inv.lines || []).map((l) => { const p = prod(l.pid); return p ? Object.assign({}, l, { hsn: p.hsn || l.hsn || "", uqc: p.uqc || uqcFor(p.unit) }) : l; });
+      try { await col("invoices").doc(inv.id).update({ lines }); inv.lines = lines; toast("HSN codes and units updated"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    on("emSave", async () => {
+      const r = {}; ["irn", "ackNo", "ackDt", "qr", "ewbNo", "ewbDt", "ewbValid"].forEach((k) => { const el = $("em-" + k); if (el && el.value.trim()) r[k] = el.value.trim(); });
+      if (r.irn && !/^[0-9a-f]{64}$/i.test(r.irn)) { toast("The IRN should be 64 characters (letters a–f and digits)."); return; }
+      if (r.ewbNo && !/^\d{12}$/.test(r.ewbNo)) { toast("The e-way bill number should be 12 digits."); return; }
+      try { await applyIrpResult(inv, r, "manual"); toast("Saved"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    on("emClear", async () => {
+      const b = $("emClear");
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Yes, remove them"; return; }
+      const rest = Object.assign({}, inv); delete rest.id; delete rest.einv;
+      try { await col("invoices").doc(inv.id).set(rest); delete inv.einv; toast("Numbers removed"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
     if (!$("vDlg").open) $("vDlg").showModal();
   }
   const pdfText = (s) => String(s ?? "").replace(/₹/g, "Rs.").replace(/[–—]/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[^\x09\x0a\x20-\x7e\xa0-\xff]/g, "");
   async function invoicePdf(inv) {
-    try { await lib("pdf"); } catch (e) { toast(e.message); return; }
+    const e = inv.einv || {};
+    try { await lib("pdf"); if (e.ewbNo) await lib("bar"); } catch (x) { toast(x.message); return; }
+    let qrImg = null;
+    if (e.qr) { try { qrImg = await qrDataUrl(e.qr); } catch (x) { toast("Couldn't draw the QR code. Check the signed QR text."); } }
     const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
-    const W = 210, M = 14, s = inv.seller || {}, c = inv.customer || {}, t = inv.totals || {};
+    const W = 210, M = 14, s = sellerOf(inv), c = inv.customer || {}, t = inv.totals || {}, tr = transportOf(inv);
     const money = (n) => f2.format(n || 0);
     let y = M + 2;
     doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text(pdfText(s.name || "Your business name"), M, y + 4);
     doc.setFontSize(11); doc.setTextColor(10, 116, 128); doc.text("TAX INVOICE", W - M, y + 4, { align: "right" }); doc.setTextColor(0);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
     let ly = y + 10;
-    doc.splitTextToSize(pdfText(s.address || ""), 110).forEach((ln) => { doc.text(ln, M, ly); ly += 4.2; });
+    doc.splitTextToSize(pdfText([s.address, [s.city, s.pin].filter(Boolean).join(" - ")].filter(Boolean).join(", ")), 110).forEach((ln) => { doc.text(ln, M, ly); ly += 4.2; });
     const sl = [s.gstin ? "GSTIN " + s.gstin : "", s.state, s.phone, s.email].filter(Boolean).join("  |  ");
     if (sl) { doc.text(pdfText(sl), M, ly); ly += 4.2; }
     let ry = y + 10;
-    [["Invoice no.", inv.no], ["Date", fdate(inv.date)], c.so ? ["Order", c.so] : null, c.vehicle ? ["Vehicle", c.vehicle] : null].filter(Boolean).forEach(([k, v]) => { doc.setTextColor(110); doc.text(k, W - M - 50, ry); doc.setTextColor(0); doc.text(pdfText(v), W - M, ry, { align: "right" }); ry += 4.6; });
+    [["Invoice no.", inv.no], ["Date", fdate(inv.date)], c.so ? ["Order", c.so] : null, tr.vehicle ? ["Vehicle", tr.vehicle] : null, e.ewbNo ? ["E-way bill", e.ewbNo] : null].filter(Boolean).forEach(([k, v]) => { doc.setTextColor(110); doc.text(k, W - M - 50, ry); doc.setTextColor(0); doc.text(pdfText(v), W - M, ry, { align: "right" }); ry += 4.6; });
     y = Math.max(ly, ry) + 3;
-    doc.setDrawColor(200); doc.line(M, y, W - M, y); y += 6;
+    if (e.irn) {
+      doc.setDrawColor(210); doc.roundedRect(M, y, W - 2 * M, 36, 2, 2);
+      if (qrImg) doc.addImage(qrImg, "PNG", W - M - 34, y + 2, 32, 32);
+      doc.setFontSize(8); doc.setTextColor(110); doc.text("E-INVOICE", M + 4, y + 6); doc.setTextColor(0);
+      doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.text("IRN", M + 4, y + 12); doc.setFont("courier", "normal"); doc.setFontSize(8);
+      doc.splitTextToSize(e.irn, W - 2 * M - 52).forEach((ln, i) => doc.text(ln, M + 12, y + 12 + i * 3.8));
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+      doc.text(pdfText(`Ack no. ${e.ackNo || "-"}     Ack date ${e.ackDt || "-"}`), M + 4, y + 26);
+      y += 42;
+    } else { doc.setDrawColor(200); doc.line(M, y, W - M, y); y += 6; }
     doc.setFontSize(8); doc.setTextColor(110); doc.text("BILL TO", M, y); doc.setTextColor(0); y += 4.5;
     doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(pdfText(c.name), M, y); doc.setFont("helvetica", "normal"); doc.setFontSize(9); y += 4.5;
-    doc.splitTextToSize(pdfText(c.address || ""), 120).forEach((ln) => { doc.text(ln, M, y); y += 4.2; });
+    doc.splitTextToSize(pdfText([c.address, [c.city, c.pin].filter(Boolean).join(" - ")].filter(Boolean).join(", ")), 120).forEach((ln) => { doc.text(ln, M, y); y += 4.2; });
     doc.text(pdfText([c.gstin ? "GSTIN " + c.gstin : "", c.phone, "Place of supply: " + (c.state || s.state || "-")].filter(Boolean).join("  |  ")), M, y); y += 7;
-    // table
     const cols = [{ h: "#", w: 8 }, { h: "Item", w: 66 }, { h: "HSN", w: 16 }, { h: "Qty", w: 14, r: 1 }, { h: "Rate", w: 22, r: 1 }, { h: "Taxable", w: 22, r: 1 }, { h: "GST", w: 14, r: 1 }, { h: "Amount", w: 20, r: 1 }];
     const head = () => { doc.setFillColor(238, 243, 244); doc.rect(M, y - 4, W - 2 * M, 7, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); let x = M; cols.forEach((cl) => { doc.text(cl.h, cl.r ? x + cl.w - 1.5 : x + 1.5, y + 0.5, cl.r ? { align: "right" } : undefined); x += cl.w; }); doc.setFont("helvetica", "normal"); y += 6; };
     head();
@@ -1426,15 +1679,14 @@
       });
       y += hgt; doc.setDrawColor(225); doc.line(M, y - 3, W - M, y - 3);
     });
-    // totals
     if (y > 235) { doc.addPage(); y = M + 6; }
     y += 2;
-    const tr = (k, v, bold) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(bold ? 11 : 9); doc.text(k, W - M - 62, y); doc.text(v, W - M, y, { align: "right" }); y += bold ? 6 : 4.8; };
-    tr("Taxable value", "Rs. " + money(t.taxable));
-    if (inv.intra) { tr("CGST", "Rs. " + money(t.cgst)); tr("SGST", "Rs. " + money(t.sgst)); } else tr("IGST", "Rs. " + money(t.igst));
-    if (t.roundOff) tr("Round off", money(t.roundOff));
+    const tr2 = (k, v, bold) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(bold ? 11 : 9); doc.text(k, W - M - 62, y); doc.text(v, W - M, y, { align: "right" }); y += bold ? 6 : 4.8; };
+    tr2("Taxable value", "Rs. " + money(t.taxable));
+    if (inv.intra) { tr2("CGST", "Rs. " + money(t.cgst)); tr2("SGST", "Rs. " + money(t.sgst)); } else tr2("IGST", "Rs. " + money(t.igst));
+    if (t.roundOff) tr2("Round off", money(t.roundOff));
     doc.setDrawColor(40); doc.line(W - M - 62, y - 3, W - M, y - 3); y += 1.5;
-    tr("Total", "Rs. " + f0.format(t.total || 0), true);
+    tr2("Total", "Rs. " + f0.format(t.total || 0), true);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
     doc.splitTextToSize(pdfText(inWords(t.total || 0)), W - 2 * M).forEach((ln) => { doc.text(ln, M, y); y += 4.4; });
     y += 3;
@@ -1443,7 +1695,34 @@
     const sy = Math.max(y + 6, 262);
     doc.setFontSize(9); doc.text(pdfText("For " + (s.name || "")), W - M, Math.min(sy, 280), { align: "right" });
     doc.setTextColor(110); doc.text("Authorised signatory", W - M, Math.min(sy + 12, 288), { align: "right" }); doc.setTextColor(0);
+    if (e.ewbNo) ewbPage(doc, inv, s, c, t, tr, e);
     await saveFile(`${inv.no.replace(/[\/\\]/g, "-")}.pdf`, doc.output("blob"));
+  }
+  function ewbPage(doc, inv, s, c, t, tr, e) {
+    doc.addPage();
+    const W = 210, M = 14; let y = M + 4;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("E-WAY BILL", M, y + 2);
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(110); doc.text(pdfText("Details as generated on the e-way bill portal. Verify at ewaybillgst.gov.in"), M, y + 8); doc.setTextColor(0);
+    try { const cv = document.createElement("canvas"); window.JsBarcode(cv, e.ewbNo, { format: "CODE128", displayValue: false, margin: 0, height: 50, width: 2, background: "#ffffff" }); doc.addImage(cv.toDataURL("image/png"), "PNG", W - M - 70, y - 4, 70, 14); } catch (x) {}
+    doc.setFont("courier", "bold"); doc.setFontSize(12); doc.text(e.ewbNo, W - M, y + 15, { align: "right" });
+    y += 24;
+    const hsn = [...new Set((inv.lines || []).map((l) => l.hsn).filter(Boolean))].join(", ");
+    const rows = [
+      ["E-way bill no.", e.ewbNo], ["Generated", e.ewbDt || "-"], ["Valid until", e.ewbValid || "-"], ["Generated by", `${s.gstin || "-"}  ${s.name || ""}`],
+      e.irn ? ["IRN", e.irn] : null,
+      ["PART A", null],
+      ["GSTIN of supplier", `${s.gstin || "-"}  ${s.name || ""}`], ["Place of dispatch", [s.city, s.state, s.pin].filter(Boolean).join(", ")],
+      ["GSTIN of recipient", `${c.gstin || "URP"}  ${c.name || ""}`], ["Place of delivery", [c.city, c.state, c.pin].filter(Boolean).join(", ")],
+      ["Document", `Tax invoice ${inv.no}, ${dmy(inv.date)}`], ["Value of goods", "Rs. " + f2.format(num(t.total))], ["HSN codes", hsn || "-"], ["Reason for transport", "Outward - Supply"],
+      ["PART B", null],
+      ["Mode", tr.vehicle ? "Road" : "-"], ["Vehicle no.", tr.vehicle || "-"], ["From", s.city || "-"], ["Transporter", [tr.transName, tr.transId].filter(Boolean).join("  ") || "-"], ["Approx. distance", tr.distance ? tr.distance + " km" : "As calculated by the portal"],
+    ].filter(Boolean);
+    rows.forEach(([k, v]) => {
+      if (v === null) { y += 3; doc.setFillColor(238, 243, 244); doc.rect(M, y - 4.5, W - 2 * M, 7, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(k, M + 2, y); y += 6; return; }
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(110); doc.text(k, M + 2, y); doc.setTextColor(0);
+      const lines = doc.splitTextToSize(pdfText(v), W - 2 * M - 58); lines.forEach((ln, i) => doc.text(ln, M + 56, y + i * 4.2));
+      y += Math.max(1, lines.length) * 4.2 + 2;
+    });
   }
 
   // ---------- Labels PDF (A4, 24 per sheet) ----------
@@ -1490,9 +1769,16 @@
     const match = (d, fields) => !q || fields.some((f) => String(f || "").toLowerCase().includes(q)) || (d.lines || []).some((l) => (l.serials || []).some((s) => s.toLowerCase().includes(q)) || String(l.name).toLowerCase().includes(q));
     if (recTab === "inv") {
       const list = S.invoices.filter((d) => match(d, [d.no, d.customer && d.customer.name, d.customer && d.customer.gstin])).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-      el.innerHTML = list.length ? list.map((d) => `<button type="button" class="rrow" data-inv="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.customer && d.customer.name)}</b><div class="muted small">${(d.lines || []).length} items · ${(d.lines || []).reduce((a, l) => a + num(l.qty), 0)} units</div></span><span class="when muted small">${fdate(d.date)}</span><span class="amt">${rs(d.totals ? d.totals.total : 0)}</span></button>`).join("")
+      const pending = S.invoices.filter((d) => isB2B(d) && !(d.einv && d.einv.irn));
+      const ready = pending.filter((d) => !einvProblems(d).length);
+      $("recActions").innerHTML = S.canWrite && S.invoices.length ? `${pending.length ? `<button type="button" class="btn" id="recDl" ${ready.length ? "" : "disabled"}>Download e-invoice file for ${ready.length} pending</button>` : ""}<button type="button" class="btn" id="recImp">Import portal results</button>${pending.length > ready.length ? `<span class="muted small">${pending.length - ready.length} pending invoice${pending.length - ready.length === 1 ? " needs" : "s need"} details first. Open ${pending.length - ready.length === 1 ? "it" : "them"} to see what's missing.</span>` : ""}` : "";
+      if ($("recDl")) $("recDl").onclick = () => downloadEinv(ready);
+      if ($("recImp")) $("recImp").onclick = () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, null));
+      const badge = (d) => { const e = d.einv || {}; return [isB2B(d) ? (e.irn ? `<span class="pill ok">E-invoice ✓</span>` : `<span class="pill warn">IRN pending</span>`) : "", e.ewbNo ? `<span class="pill ok">E-way bill ✓</span>` : ewbNeeded(d) ? `<span class="pill warn">E-way bill pending</span>` : ""].join(" "); };
+      el.innerHTML = list.length ? list.map((d) => `<button type="button" class="rrow" data-inv="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.customer && d.customer.name)}</b><div class="muted small">${(d.lines || []).length} items · ${(d.lines || []).reduce((a, l) => a + num(l.qty), 0)} units</div><div class="row" style="margin-top:4px">${badge(d)}</div></span><span class="when muted small">${fdate(d.date)}</span><span class="amt">${rs(d.totals ? d.totals.total : 0)}</span></button>`).join("")
         : `<div class="empty"><h3>${S.invoices.length ? "No invoices match" : "No invoices yet"}</h3><p>${S.invoices.length ? "Try another search." : "Invoices you create in Sell appear here."}</p></div>`;
     } else {
+      $("recActions").innerHTML = "";
       const list = S.receipts.filter((d) => match(d, [d.no, d.supplier, d.ref])).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       el.innerHTML = list.length ? list.map((d) => { const u = (d.lines || []).reduce((a, l) => a + num(l.qty), 0), diff = (d.lines || []).some((l) => num(l.expected) && num(l.expected) !== num(l.qty));
         return `<button type="button" class="rrow" data-grn="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.supplier || "Supplier not given")}</b><div class="muted small">${d.ref ? "Challan " + esc(d.ref) + " · " : ""}${(d.lines || []).length} products</div></span><span class="when muted small">${fdate(d.date)}</span><span>${diff ? `<span class="pill warn">Differences</span>` : ""} <b>${u}</b> <span class="muted small">units</span></span></button>`; }).join("")
@@ -1508,7 +1794,7 @@
   });
 
   // ---------- SETTINGS ----------
-  const SF = ["name", "address", "gstin", "state", "phone", "email", "prefix", "gst", "bank", "terms"];
+  const SF = ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "prefix", "gst", "bank", "terms"];
   function fillSettings() {
     const a = document.activeElement; if (a && $("setForm").contains(a) && a.tagName !== "BUTTON") return;
     SF.forEach((k) => ($("s-" + k).value = S.settings[k] ?? ""));
@@ -1519,6 +1805,10 @@
     e.preventDefault(); if (!S.db) return;
     const d = {}; SF.forEach((k) => (d[k] = $("s-" + k).value.trim()));
     d.gstin = d.gstin.toUpperCase(); d.pricesIncludeGst = $("s-incl").checked; d.updatedAt = new Date().toISOString();
+    if (d.prefix && !/^[A-Za-z1-9][A-Za-z0-9]{0,4}$/.test(d.prefix)) { toast("Invoice prefix: up to 5 letters or digits, not starting with 0."); return; }
+    if (d.gstin && !GSTIN_RE.test(d.gstin)) { toast("GSTIN should be 15 characters."); return; }
+    if (d.pin && !/^\d{6}$/.test(d.pin)) { toast("PIN code should be 6 digits."); return; }
+    if (d.gstin && !d.state) d.state = stateFromGstin(d.gstin);
     try { await S.db.doc("settings/business").set(d); toast("Business details saved"); } catch (x) { writeFailed(x); }
   });
 
@@ -1547,6 +1837,7 @@
   $("stockLevel").addEventListener("change", renderStock);
   const stateOpts = `<option value="">Select state</option>` + STATES.map((s) => `<option>${esc(s)}</option>`).join("");
   $("c-state").innerHTML = stateOpts; $("s-state").innerHTML = stateOpts;
+  $("p-uqc").innerHTML = UQC.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
   $("catOptions").innerHTML = DEFAULT_CATS.map((c) => `<option value="${esc(c)}"></option>`).join("");
 
   mountScan("rcvScan", "rcv", onReceiveScan);
