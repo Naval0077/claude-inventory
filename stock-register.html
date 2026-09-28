@@ -687,6 +687,7 @@
     xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
     zx: "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js",
     qr: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js",
+    zxw: "https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js",
   };
   const libs = {};
   function lib(k) {
@@ -836,7 +837,7 @@
         const f = pi.files && pi.files[0]; if (!f) return;
         feedback(prefix, "info", "Reading barcode from photo…");
         try {
-          const codes = await decodePhoto(f, (i, n) => { if (i > 2) feedback(prefix, "info", `Reading barcode from photo… (try ${i} of ${n})`); });
+          const codes = await decodePhoto(f, (i, n) => { if (i > 1) feedback(prefix, "info", `Reading barcode from photo… (looking closer, ${i} of ${n})`); }, (t) => !!(parseScan(t).pid || serialIdx.has(K(t))));
           if (!codes.length) { feedback(prefix, "err", "No barcode found in that photo. Fill most of the photo with the barcode, keep it flat, sharp and without glare, and try again. You can also type the number in the scan box."); beep(false); return; }
           codes.sort((a, b) => (lookupCode(b) ? 1 : 0) - (lookupCode(a) ? 1 : 0));
           codes.forEach((c) => handler(c));
@@ -883,11 +884,40 @@
     for (let i = 0, j = 0; j < out.length; i += 4, j++) out[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8;
     return { out, w: cv.width, h: cv.height };
   }
-  async function decodePhoto(file, onStep) {
+  // Photo decoding, strongest first: the phone's own detector, then ZXing C++ (WebAssembly, published beside the page),
+  // then zxing-js. Retail codes (EAN/UPC…) have weak checksums and misread on tilted or blurry photos, so they are
+  // accepted at once only when they match something we know, otherwise only when two different frames agree.
+  async function decodePhoto(file, onStep, known) {
     const img = await loadPhoto(file);
     if ("BarcodeDetector" in window) {
       try { const r = await new window.BarcodeDetector().detect(img); if (r.length) return [...new Set(r.map((x) => x.rawValue))]; } catch (e) {}
     }
+    let wasmReady = false;
+    try { await lib("zxw"); await window.ZXingWASM.prepareZXingModule({ overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", document.baseURI).href : prefix + path }, fireImmediately: true }); wasmReady = true; } catch (e) {}
+    if (wasmReady) { try { return await decodeWasm(img, onStep, known); } catch (e) {} }
+    return decodeJs(img, onStep, known);
+  }
+  async function decodeWasm(img, onStep, known) {
+    const Zw = window.ZXingWASM, weak = new Set(["EAN-13", "EAN-8", "UPC-A", "UPC-E", "ITF", "Codabar", "Code39"]);
+    const opts = { formats: ["Code128", "EAN-13", "EAN-8", "UPC-A", "UPC-E", "Code39", "Code93", "ITF", "Codabar", "QRCode", "DataMatrix", "PDF417"], tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, maxNumberOfSymbols: 8 };
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, big = Math.max(iw, ih);
+    const region = (sx, sy, sw, sh, scale) => { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale)); const g = c.getContext("2d", { willReadFrequently: true }); g.imageSmoothingQuality = "high"; g.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height); return g.getImageData(0, 0, c.width, c.height); };
+    const plan = [() => region(0, 0, iw, ih, Math.min(1, 2400 / big))];
+    for (const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) plan.push(() => region(iw * (fx - 0.3), ih * (fy - 0.3), iw * 0.6, ih * 0.6, (2400 / (big * 0.6)) * 1.6));
+    const seen = new Map(), found = [];
+    for (let i = 0; i < plan.length; i++) {
+      if (onStep) onStep(i + 1, plan.length);
+      await new Promise((r) => setTimeout(r, 0));
+      const res = (await Zw.readBarcodes(plan[i](), opts)).filter((x) => x.isValid && x.text);
+      for (const x of res) {
+        const frames = seen.get(x.text) || new Set(); frames.add(i); seen.set(x.text, frames);
+        if ((!weak.has(x.format) || (known && known(x.text)) || frames.size >= 2) && !found.includes(x.text)) found.push(x.text);
+      }
+      if (found.length) return found;
+    }
+    return [];
+  }
+  async function decodeJs(img, onStep, known) {
     await lib("zx");
     const Z = window.ZXing, F = Z.BarcodeFormat, hints = new Map();
     hints.set(Z.DecodeHintType.TRY_HARDER, true);
@@ -907,7 +937,7 @@
         if (!res || !res.getText()) continue;
         const t = res.getText(), frames = seen.get(t) || new Set();
         frames.add(i); seen.set(t, frames);
-        if (!weak.has(res.getBarcodeFormat()) || frames.size >= 2) return [t];
+        if (!weak.has(res.getBarcodeFormat()) || (known && known(t)) || frames.size >= 2) return [t];
       }
     }
     return [];
