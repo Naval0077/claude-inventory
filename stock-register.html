@@ -836,8 +836,8 @@
         const f = pi.files && pi.files[0]; if (!f) return;
         feedback(prefix, "info", "Reading barcode from photo…");
         try {
-          const codes = await decodePhoto(f);
-          if (!codes.length) { feedback(prefix, "err", "No barcode found in that photo. Hold the phone closer, keep the barcode flat and well lit, and try again."); beep(false); return; }
+          const codes = await decodePhoto(f, (i, n) => { if (i > 2) feedback(prefix, "info", `Reading barcode from photo… (try ${i} of ${n})`); });
+          if (!codes.length) { feedback(prefix, "err", "No barcode found in that photo. Fill most of the photo with the barcode, keep it flat, sharp and without glare, and try again. You can also type the number in the scan box."); beep(false); return; }
           codes.sort((a, b) => (lookupCode(b) ? 1 : 0) - (lookupCode(a) ? 1 : 0));
           codes.forEach((c) => handler(c));
         } catch (e) { feedback(prefix, "err", e.message || "Couldn't read that photo."); }
@@ -862,24 +862,55 @@
     el.innerHTML = `<span>Scanning serial numbers for <b>${esc(p.name)}</b></span><button type="button" class="btn">Done with this product</button>`;
     el.querySelector("button").onclick = onDone;
   }
-  async function decodePhoto(file) {
+  // Phone photos are large, often rotated and the barcode is small in frame, so read a few prepared frames:
+  // downscaled, turned 90°, and centre crops, with two binarizers. The phone's own detector is tried first where it exists.
+  async function loadPhoto(file) {
+    try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) {}
+    const url = URL.createObjectURL(file);
+    try { return await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("Couldn't open that photo. Take it again, or choose a JPEG or PNG.")); im.src = url; }); }
+    finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  }
+  function grayFrame(img, crop, maxSide, rot) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const cw = iw * crop, ch = ih * crop, sx = (iw - cw) / 2, sy = (ih - ch) / 2;
+    const k = Math.min(1, maxSide / Math.max(cw, ch)), w = Math.max(1, Math.round(cw * k)), h = Math.max(1, Math.round(ch * k));
+    const turn = rot % 180 !== 0, cv = document.createElement("canvas");
+    cv.width = turn ? h : w; cv.height = turn ? w : h;
+    const g = cv.getContext("2d", { willReadFrequently: true });
+    g.translate(cv.width / 2, cv.height / 2); g.rotate((rot * Math.PI) / 180);
+    g.drawImage(img, sx, sy, cw, ch, -w / 2, -h / 2, w, h);
+    const d = g.getImageData(0, 0, cv.width, cv.height).data, out = new Uint8ClampedArray(cv.width * cv.height);
+    for (let i = 0, j = 0; j < out.length; i += 4, j++) out[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8;
+    return { out, w: cv.width, h: cv.height };
+  }
+  async function decodePhoto(file, onStep) {
+    const img = await loadPhoto(file);
     if ("BarcodeDetector" in window) {
-      try {
-        const det = new window.BarcodeDetector();
-        const bmp = await createImageBitmap(file);
-        const r = await det.detect(bmp);
-        if (r.length) return [...new Set(r.map((x) => x.rawValue))];
-      } catch (e) {}
+      try { const r = await new window.BarcodeDetector().detect(img); if (r.length) return [...new Set(r.map((x) => x.rawValue))]; } catch (e) {}
     }
     await lib("zx");
-    const url = URL.createObjectURL(file);
-    try {
-      const hints = new Map(); hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
-      const reader = new window.ZXing.BrowserMultiFormatReader(hints);
-      const res = await reader.decodeFromImageUrl(url);
-      return res ? [res.getText()] : [];
-    } catch (e) { return []; }
-    finally { URL.revokeObjectURL(url); }
+    const Z = window.ZXing, F = Z.BarcodeFormat, hints = new Map();
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_39, F.CODE_93, F.ITF, F.CODABAR, F.QR_CODE, F.DATA_MATRIX]);
+    const reader = new Z.MultiFormatReader(); reader.setHints(hints);
+    const plan = [[1, 1600, 0], [1, 1600, 90], [0.6, 1600, 0], [0.6, 1600, 90], [1, 2600, 0], [0.35, 1400, 0], [0.35, 1400, 90], [0.6, 2600, 0], [0.22, 1200, 0], [0.22, 1200, 90], [1, 1000, 0], [1, 2600, 90]];
+    // Retail codes (EAN/UPC/ITF…) have weak checksums and can misread on blurry photos, so two different frames must agree.
+    const weak = new Set([F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR, F.CODE_39]);
+    const seen = new Map();
+    for (let i = 0; i < plan.length; i++) {
+      if (onStep) onStep(i + 1, plan.length);
+      await new Promise((r) => setTimeout(r, 0));
+      const [crop, size, rot] = plan[i], f = grayFrame(img, crop, size, rot);
+      for (const Bin of [Z.HybridBinarizer, Z.GlobalHistogramBinarizer]) {
+        let res = null;
+        try { res = reader.decode(new Z.BinaryBitmap(new Bin(new Z.RGBLuminanceSource(f.out, f.w, f.h))), hints); } catch (e) {}
+        if (!res || !res.getText()) continue;
+        const t = res.getText(), frames = seen.get(t) || new Set();
+        frames.add(i); seen.set(t, frames);
+        if (!weak.has(res.getBarcodeFormat()) || frames.size >= 2) return [t];
+      }
+    }
+    return [];
   }
 
   function pickProduct(inputId) {
