@@ -1,6 +1,6 @@
 // Keeps the app's own files on the device so it opens instantly and survives short connection drops.
 // Data always comes live from Supabase; this never caches it.
-const VERSION = "stock-v1";
+const VERSION = "stock-v2";
 const SHELL = ["./", "index.html", "styles.css", "config.js", "db.js", "camera.js", "app.js", "boot.js", "manifest.webmanifest", "icons/icon.svg",
   "vendor/supabase.js", "vendor/zxing-wasm-reader.js", "vendor/zxing_reader.wasm"];
 
@@ -17,6 +17,7 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(caches.open(VERSION).then(async (cache) => {
     const hit = await cache.match(e.request, { ignoreSearch: true });
     const fresh = fetch(e.request).then((res) => { if (res.ok) cache.put(e.request, res.clone()); return res; }).catch(() => hit);
+    e.waitUntil(fresh.catch(() => {})); // keep refreshing the cache even though we may answer from `hit` below
     return hit || fresh;
   }));
 });
