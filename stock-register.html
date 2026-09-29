@@ -1,0 +1,2325 @@
+<title>Pump &amp; Solar Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f3f6f7;
+    --surface: #ffffff;
+    --surface-2: #eef3f4;
+    --line: #dde5e8;
+    --line-2: #c9d5d9;
+    --text: #172329;
+    --muted: #5a6b73;
+    --faint: #85959c;
+    --accent: #0a7480;
+    --accent-hover: #086570;
+    --accent-ink: #ffffff;
+    --accent-soft: #e0f1f2;
+    --sun: #f0a31a;
+    --ok: #1c8f58;   --ok-soft: #e2f4ea;
+    --warn: #b57400; --warn-soft: #fcf1d9;
+    --crit: #cc3d35; --crit-soft: #fbe6e4;
+    --info: #2a64b8; --info-soft: #e5eefb;
+    --shadow: 0 1px 2px rgba(18,40,48,.05), 0 4px 16px rgba(18,40,48,.06);
+    --paper: #ffffff; --paper-ink: #1b252b; --paper-muted: #5f6d74; --paper-line: #dfe5e8;
+    --display: "Outfit", "Segoe UI", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0e1619; --surface: #152125; --surface-2: #1b2a2f; --line: #24363c; --line-2: #31484f;
+      --text: #e3ecee; --muted: #9aacb2; --faint: #6d8288;
+      --accent: #3bb3bf; --accent-hover: #52c3ce; --accent-ink: #062226; --accent-soft: #143439;
+      --ok: #4cc488; --ok-soft: #133524; --warn: #e8b34a; --warn-soft: #3a2d10; --crit: #ef7a70; --crit-soft: #3d1b18; --info: #7eaaf0; --info-soft: #172a45;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e1619; --surface: #152125; --surface-2: #1b2a2f; --line: #24363c; --line-2: #31484f;
+    --text: #e3ecee; --muted: #9aacb2; --faint: #6d8288;
+    --accent: #3bb3bf; --accent-hover: #52c3ce; --accent-ink: #062226; --accent-soft: #143439;
+    --ok: #4cc488; --ok-soft: #133524; --warn: #e8b34a; --warn-soft: #3a2d10; --crit: #ef7a70; --crit-soft: #3d1b18; --info: #7eaaf0; --info-soft: #172a45;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--body); padding-inline: 16px; padding-block: 0 40px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.005em; }
+  h2 { font-size: 26px; font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 600; }
+  p { margin: 0; }
+  .app { max-width: 1180px; margin: 0 auto; display: grid; gap: 22px; }
+
+  /* Top bar */
+  .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 14px 10px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; }
+  .brand svg { flex: none; }
+  .brand-name { font: 600 18px/1.1 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-sub { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .dot.live { background: var(--ok); }
+  .dot.off { background: var(--crit); }
+  nav.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+  nav.tabs button { border: 0; background: transparent; padding: 7px 14px; border-radius: 9px; cursor: pointer; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+  nav.tabs button svg { width: 18px; height: 18px; }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+  @media (max-width: 760px) {
+    body { padding-block: 0 96px; }
+    .scan-state { display: none; }
+    nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; border-radius: 0; border-width: 1px 0 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); justify-content: space-around; box-shadow: 0 -4px 16px rgba(0,0,0,.06); }
+    nav.tabs button { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 8px; flex: 1; }
+    nav.tabs button svg { width: 22px; height: 22px; }
+  }
+
+  /* Common bits */
+  .view { display: grid; gap: 18px; }
+  .view-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 20px; }
+  .view-head p { color: var(--muted); max-width: 62ch; margin-top: 4px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .card > * { min-width: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; align-content: start; }
+  .card.raised { box-shadow: var(--shadow); }
+  .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line-2); background: var(--surface); padding: 9px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-ink); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.ghost:hover { color: var(--accent); background: var(--accent-soft); }
+  .btn.danger { color: var(--crit); border-color: var(--line-2); }
+  .btn.danger.armed { background: var(--crit); color: #fff; border-color: var(--crit); }
+  .btn.big { padding: 13px 20px; font-size: 16px; border-radius: 12px; width: 100%; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .icon-btn { border: 0; background: transparent; cursor: pointer; color: var(--faint); width: 30px; height: 30px; border-radius: 8px; display: inline-grid; place-items: center; }
+  .icon-btn:hover { background: var(--surface-2); color: var(--crit); }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.low, .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.out, .pill.err { background: var(--crit-soft); color: var(--crit); }
+  .pill.info { background: var(--info-soft); color: var(--info); }
+  .pill.neutral { background: var(--surface-2); color: var(--muted); }
+  .banner { border-radius: 12px; padding: 12px 16px; background: var(--warn-soft); color: var(--warn); font-weight: 500; }
+
+  /* Forms */
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+  .fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fields .full { grid-column: 1 / -1; }
+  @media (max-width: 560px) { .fields, .fields.three { grid-template-columns: 1fr; } }
+  .field { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .field input, .field select, .field textarea, .input { width: 100%; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 12px; font-size: 15px; font-weight: 400; color: var(--text); }
+  .field input:focus, .field select:focus, .field textarea:focus, .input:focus { border-color: var(--accent); outline: 2px solid var(--accent-soft); outline-offset: 0; }
+  .field textarea { resize: vertical; min-height: 64px; }
+  .hint { font-weight: 400; font-size: 12px; color: var(--faint); }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+  .check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+
+  /* Stock summary */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 2px; }
+  .stat .k { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .stat .v { font: 600 26px/1.2 var(--display); font-variant-numeric: tabular-nums; }
+  .stat .s { font-size: 12px; color: var(--faint); }
+  .stat.attn { background: var(--warn-soft); border-color: transparent; }
+  .stat.attn .v, .stat.attn .k { color: var(--warn); }
+  @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat .v { font-size: 22px; } }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .search { position: relative; flex: 1 1 260px; }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--faint); }
+  .search input { padding-left: 38px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .chip b { font-weight: 500; color: var(--faint); margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip[aria-pressed="true"] b { color: var(--accent-ink); opacity: .8; }
+
+  /* Product list */
+  .plist { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .phead, .prow { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.3fr); gap: 14px; align-items: center; padding: 12px 18px; }
+  .phead { font-size: 12px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; background: var(--surface-2); }
+  .prow { width: 100%; border: 0; border-top: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+  .prow:hover { background: var(--surface-2); }
+  .p-name { font-weight: 600; display: block; }
+  .p-meta { font-size: 13px; color: var(--muted); display: block; }
+  .p-meta code { color: var(--accent); }
+  .p-cat { font-size: 14px; color: var(--muted); }
+  .p-spec { font-size: 14px; }
+  .p-spec small, .p-price small { display: block; color: var(--faint); font-size: 12px; }
+  .p-price { font-variant-numeric: tabular-nums; }
+  .p-stock { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .p-stock b { font: 600 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .p-stock span.u { color: var(--faint); font-size: 13px; }
+  .ta-r { text-align: right; }
+  @media (max-width: 760px) {
+    .phead { display: none; }
+    .prow { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main stock" "spec price"; gap: 4px 12px; }
+    .p-main { grid-area: main; } .p-stock { grid-area: stock; } .p-spec { grid-area: spec; font-size: 13px; color: var(--muted); } .p-price { grid-area: price; text-align: right; font-size: 13px; }
+    .p-cat { display: none; }
+  }
+  .empty { padding: 44px 20px; text-align: center; display: grid; gap: 8px; justify-items: center; color: var(--muted); }
+  .empty h3 { color: var(--text); }
+  .empty .row { justify-content: center; margin-top: 6px; }
+
+  /* Split layouts */
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+  .col { display: grid; gap: 18px; min-width: 0; }
+  .sticky { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); }
+  @media (max-width: 960px) { .split { grid-template-columns: minmax(0, 1fr); } .sticky { position: static; } }
+  .step-head { display: flex; align-items: center; gap: 10px; }
+  .step { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font: 600 14px var(--display); flex: none; }
+
+  /* Scan panel */
+  .scan-box { display: flex; gap: 10px; flex-wrap: wrap; }
+  .scan-field { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 10px; border: 2px dashed var(--line-2); border-radius: 14px; padding: 10px 14px; background: var(--surface-2); cursor: text; transition: border-color .15s, background .15s; }
+  .scan-field svg { width: 26px; height: 26px; color: var(--faint); flex: none; }
+  .scan-field input { flex: 1; min-width: 0; border: 0; background: transparent; font: 500 17px var(--mono); outline: none; padding: 6px 0; }
+  .scan-state { font-size: 12px; font-weight: 600; color: var(--faint); white-space: nowrap; }
+  .scan-field.armed { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+  .scan-field.armed svg, .scan-field.armed .scan-state { color: var(--accent); }
+  .scan-help { font-size: 13px; color: var(--faint); }
+  .active-hint { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--info-soft); color: var(--info); border-radius: 12px; padding: 10px 14px; font-weight: 500; }
+  .active-hint .btn { padding: 5px 12px; font-size: 13px; margin-left: auto; }
+  .feedback { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-radius: 12px; padding: 11px 14px; font-weight: 500; }
+  .feedback.ok { background: var(--ok-soft); color: var(--ok); }
+  .feedback.warn { background: var(--warn-soft); color: var(--warn); }
+  .feedback.err { background: var(--crit-soft); color: var(--crit); }
+  .feedback.info { background: var(--info-soft); color: var(--info); }
+  .feedback .btn { padding: 5px 12px; font-size: 13px; margin-left: auto; }
+  @media (prefers-reduced-motion: no-preference) { .feedback.flash { animation: flash .35s ease; } @keyframes flash { from { transform: scale(.985); opacity: .6; } to { transform: none; opacity: 1; } } }
+
+  .picker { display: flex; gap: 8px; flex: 1 1 240px; min-width: 0; max-width: 460px; }
+  .picker input { flex: 1; min-width: 0; }
+
+  /* Lines */
+  .lines { display: grid; gap: 10px; }
+  .line { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; }
+  .line.is-active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .line-top { display: flex; gap: 12px; align-items: flex-start; }
+  .line-top .grow { flex: 1; min-width: 0; }
+  .line-nums { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+  .mini { display: grid; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .mini input { width: 92px; border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 8px; background: var(--surface); font-variant-numeric: tabular-nums; }
+  .mini input.rate { width: 120px; }
+  .mini .val { font: 600 18px/32px var(--display); color: var(--text); font-variant-numeric: tabular-nums; }
+  .stepper { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+  .stepper button { width: 32px; border: 0; background: var(--surface-2); cursor: pointer; font-size: 17px; color: var(--muted); }
+  .stepper button:hover { color: var(--accent); }
+  .stepper input { width: 58px; border: 0; border-radius: 0; text-align: center; padding: 6px 0; }
+  .serials { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sn { display: inline-flex; align-items: center; gap: 4px; font: 500 12px/1 var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 4px 4px 8px; }
+  .sn button { border: 0; background: transparent; cursor: pointer; color: var(--faint); font-size: 14px; line-height: 1; padding: 0 3px; }
+  .sn button:hover { color: var(--crit); }
+  .sn.plain { padding-right: 8px; }
+  .sn.new { border-color: var(--info); }
+
+  /* Totals */
+  .totals { display: grid; gap: 6px; font-variant-numeric: tabular-nums; }
+  .totals .tr { display: flex; justify-content: space-between; gap: 10px; }
+  .totals .tr span:first-child { color: var(--muted); }
+  .totals .grand { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; font: 600 22px var(--display); }
+  .totals .grand span:first-child { color: var(--text); }
+  .words { font-size: 13px; color: var(--muted); }
+  .warnlist { display: grid; gap: 6px; }
+
+  /* Records */
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+  .seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+  .rlist { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .rrow { width: 100%; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 13px 18px; border: 0; border-top: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+  .rrow:first-child { border-top: 0; }
+  .rrow:hover { background: var(--surface-2); }
+  .rrow .no { font: 500 14px var(--mono); color: var(--accent); }
+  .rrow .amt { font: 600 16px var(--display); text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) { .rrow { grid-template-columns: minmax(0, 1fr) auto; } .rrow .when { display: none; } }
+
+  /* Dialogs */
+  dialog { border: 0; border-radius: 18px; padding: 0; background: var(--surface); color: var(--text); width: min(680px, calc(100vw - 24px)); max-height: calc(100vh - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog.wide { width: min(900px, calc(100vw - 24px)); }
+  dialog::backdrop { background: rgba(12,24,28,.45); }
+  .dlg { display: grid; gap: 16px; padding: 22px; }
+  .dlg-head { display: flex; align-items: flex-start; gap: 12px; }
+  .dlg-head .grow { flex: 1; min-width: 0; }
+  .dlg-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 16px; }
+  .dlg-foot .row { margin-left: auto; }
+  .close { border: 0; background: var(--surface-2); width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 18px; color: var(--muted); flex: none; }
+  .close:hover { color: var(--text); }
+  .section-t { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .kv div { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+  .kv b { display: block; font: 600 20px var(--display); font-variant-numeric: tabular-nums; }
+  .kv span { font-size: 12px; color: var(--muted); }
+  .barcode-box { background: #fff; border-radius: 10px; padding: 10px; display: flex; justify-content: center; border: 1px solid var(--line); }
+  .barcode-box svg { max-width: 100%; height: 70px; }
+  .err { color: var(--crit); font-size: 14px; }
+
+  /* Import */
+  .drop { border: 2px dashed var(--line-2); border-radius: 14px; padding: 30px 20px; text-align: center; display: grid; gap: 8px; justify-items: center; cursor: pointer; background: var(--surface-2); }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop svg { width: 36px; height: 36px; color: var(--accent); }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.grid th, table.grid td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+  table.grid th { background: var(--surface-2); vertical-align: top; }
+  table.grid th select { width: 100%; min-width: 130px; border: 1px solid var(--line-2); border-radius: 6px; padding: 4px 6px; background: var(--surface); font-size: 12px; }
+  table.grid th .hdr { display: block; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
+  .progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+  .progress span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+
+  /* Invoice paper */
+  .paper { background: var(--paper); color: var(--paper-ink); border: 1px solid var(--paper-line); border-radius: 10px; padding: 24px; font-size: 13px; display: grid; gap: 16px; }
+  .paper .muted { color: var(--paper-muted); }
+  .paper h4 { margin: 0; font: 600 20px var(--display); }
+  .paper .top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+  .paper .title { font: 700 13px var(--body); letter-spacing: .12em; text-transform: uppercase; color: #0a7480; }
+  .paper table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .paper th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--paper-muted); border-bottom: 1.5px solid var(--paper-ink); padding: 6px; }
+  .paper td { border-bottom: 1px solid var(--paper-line); padding: 7px 6px; vertical-align: top; }
+  .paper .num { text-align: right; white-space: nowrap; }
+  .paper .sns { font: 11px var(--mono); color: var(--paper-muted); margin-top: 3px; }
+  .paper .sum { margin-left: auto; width: min(300px, 100%); display: grid; gap: 4px; }
+  .paper .sum div { display: flex; justify-content: space-between; }
+  .paper .sum .g { font: 700 16px var(--display); border-top: 1.5px solid var(--paper-ink); padding-top: 6px; }
+  .paper-wrap { overflow-x: auto; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 50; max-width: calc(100vw - 32px); text-align: center; }
+  @media (max-width: 760px) { .toast { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">
+        <rect width="38" height="38" rx="11" fill="var(--accent)"></rect>
+        <circle cx="24.5" cy="13.5" r="4.2" fill="var(--sun)"></circle>
+        <path d="M13 11c3.6 4.6 5.5 7.9 5.5 10.6a5.5 5.5 0 0 1-11 0C7.5 18.9 9.4 15.6 13 11z" fill="#ffffff"></path>
+      </svg>
+      <div style="min-width:0">
+        <div class="brand-name" id="bizName">Pump &amp; Solar Stock</div>
+        <div class="brand-sub"><span class="dot" id="dot"></span><span id="conn">Connecting…</span></div>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-view="stock" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>Stock</button>
+      <button type="button" data-view="receive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Receive</button>
+      <button type="button" data-view="sell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>Sell</button>
+      <button type="button" data-view="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/></svg>Records</button>
+      <button type="button" data-view="parties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Parties</button>
+      <button type="button" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    </nav>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- STOCK -->
+  <section class="view" id="v-stock">
+    <div class="view-head">
+      <div>
+        <h2>Stock</h2>
+        <p>Your catalogue and what's on hand right now. Tap a product to see its serial numbers, edit it or correct the count.</p>
+      </div>
+      <div class="row" data-write>
+        <button class="btn" type="button" id="importBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v5h16v-5"/></svg>Import catalogue</button>
+        <button class="btn primary" type="button" id="addProductBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add product</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="k">Products</span><span class="v" id="sProducts">–</span><span class="s" id="sProductsS">&nbsp;</span></div>
+      <div class="stat"><span class="k">Units in stock</span><span class="v" id="sUnits">–</span><span class="s" id="sUnitsS">&nbsp;</span></div>
+      <div class="stat"><span class="k">Stock value</span><span class="v" id="sValue">–</span><span class="s">at cost price</span></div>
+      <div class="stat" id="sLowBox"><span class="k">Need reordering</span><span class="v" id="sLow">–</span><span class="s" id="sLowS">&nbsp;</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="input" id="stockQ" type="search" placeholder="Search by name, code, brand or serial number" aria-label="Search stock">
+      </div>
+      <select class="input" id="stockLevel" style="width:auto" aria-label="Filter by stock level">
+        <option value="all">All stock levels</option>
+        <option value="attn">Low or out of stock</option>
+        <option value="in">In stock only</option>
+      </select>
+    </div>
+    <div class="chips" id="catChips" role="group" aria-label="Filter by category"></div>
+    <div class="plist" id="plist"></div>
+  </section>
+
+  <!-- RECEIVE -->
+  <section class="view" id="v-receive" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Receive goods</h2>
+        <p>Check a factory delivery before it goes on the shelf. Enter what the challan says, scan each product and serial number, and the page shows anything missing or extra.</p>
+      </div>
+    </div>
+    <div class="split">
+      <div class="col">
+        <div class="card raised" id="rcvScan"></div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Items in this delivery</h3>
+            <div class="picker">
+              <input class="input" id="rcvPick" list="productOptions" placeholder="Add a product by name or code" aria-label="Add a product to this delivery">
+              <button class="btn" type="button" id="rcvPickBtn">Add</button>
+            </div>
+          </div>
+          <div id="rcvLines" class="lines"></div>
+        </div>
+      </div>
+      <aside class="col">
+        <div class="card">
+          <h3>Delivery details</h3>
+          <div class="fields">
+            <label class="field full">Supplier / factory<input id="rcv-supplier" list="supplierOptions" placeholder="Pick a saved supplier or type a new one"></label>
+            <div class="full small" id="supHint" hidden></div>
+            <label class="field">Challan or invoice no.<input id="rcv-ref" placeholder="DC-1042"></label>
+            <label class="field">Bill amount (₹) <span class="hint">incl. GST, for payments</span><input id="rcv-billAmount" type="number" min="0" step="0.01" placeholder="Optional"></label>
+            <label class="field">Date received<input id="rcv-date" type="date"></label>
+            <label class="field full">Notes<textarea id="rcv-notes" placeholder="Vehicle no., damages, remarks"></textarea></label>
+          </div>
+        </div>
+        <div class="card sticky">
+          <div id="rcvSummary"></div>
+          <button class="btn primary big" type="button" id="rcvConfirm" data-write>Add to stock</button>
+          <button class="btn ghost" type="button" id="rcvClear">Start over</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- SELL -->
+  <section class="view" id="v-sell" hidden>
+    <div class="view-head">
+      <div>
+        <h2>New sale</h2>
+        <p>Enter the sales order, then scan each product as it's loaded. The invoice is built from what was actually scanned, serial numbers included.</p>
+      </div>
+    </div>
+    <div class="split">
+      <div class="col">
+        <div class="card">
+          <div class="step-head"><span class="step">1</span><h3>Customer</h3></div>
+          <div class="fields">
+            <label class="field">Customer name<input id="c-name" list="customerOptions" placeholder="Pick a saved customer or type a new one"></label>
+            <div class="full small" id="custHint" hidden></div>
+            <label class="field">Phone<input id="c-phone" inputmode="tel" placeholder="98xxxxxx10"></label>
+            <label class="field">GSTIN <span class="hint">optional</span><input id="c-gstin" placeholder="22AAAAA0000A1Z5" style="text-transform:uppercase"></label>
+            <label class="field">State (place of supply)<select id="c-state"></select></label>
+            <label class="field full">Billing address<textarea id="c-address" placeholder="Building, street, area"></textarea></label>
+            <label class="field">City / town<input id="c-city" placeholder="Pune"></label>
+            <label class="field">PIN code<input id="c-pin" inputmode="numeric" maxlength="6" placeholder="411001"></label>
+            <label class="field">Sales order no. <span class="hint">optional</span><input id="c-so" placeholder="SO-221"></label>
+          </div>
+          <div class="section-t">Transport, for the e-way bill</div>
+          <div class="fields">
+            <label class="field">Vehicle no.<input id="c-vehicle" placeholder="MH12AB1234" style="text-transform:uppercase"></label>
+            <label class="field">Distance (km)<input id="c-distance" type="number" min="0" step="1" inputmode="numeric" placeholder="0 = portal works it out"></label>
+            <label class="field">Transporter name <span class="hint">optional</span><input id="c-transName" placeholder="ABC Roadways"></label>
+            <label class="field">Transporter GSTIN / ID <span class="hint">optional</span><input id="c-transId" style="text-transform:uppercase" placeholder="29AAAAA0000A1Z5"></label>
+          </div>
+        </div>
+        <div class="card raised">
+          <div class="step-head"><span class="step">2</span><h3>Load and scan</h3></div>
+          <div id="sellScan" style="display:grid;gap:12px"></div>
+          <div class="card-head">
+            <span class="muted small">Add items from the sales order first to check what's loaded against it, or just scan.</span>
+            <div class="picker">
+              <input class="input" id="sellPick" list="productOptions" placeholder="Add a product to the order" aria-label="Add a product to the order">
+              <button class="btn" type="button" id="sellPickBtn">Add</button>
+            </div>
+          </div>
+          <div id="sellLines" class="lines"></div>
+        </div>
+      </div>
+      <aside class="col">
+        <div class="card sticky raised">
+          <div class="step-head"><span class="step">3</span><h3>Invoice</h3></div>
+          <div id="sellTotals"></div>
+          <button class="btn primary big" type="button" id="sellCreate" data-write>Create invoice</button>
+          <button class="btn ghost" type="button" id="sellClear">Start over</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- RECORDS -->
+  <section class="view" id="v-records" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Records</h2>
+        <p>Every invoice and goods receipt. Open one to see the details, download the invoice PDF or print serial labels.</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Record type">
+        <button type="button" data-rec="inv" aria-pressed="true">Invoices</button>
+        <button type="button" data-rec="grn" aria-pressed="false">Goods received</button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="input" id="recQ" type="search" placeholder="Search number, customer, supplier or serial" aria-label="Search records">
+      </div>
+    </div>
+    <div class="row" id="recActions"></div>
+    <div class="rlist" id="rlist"></div>
+  </section>
+
+  <!-- PARTIES -->
+  <section class="view" id="v-parties" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Customers &amp; suppliers</h2>
+        <p>Everyone you sell to or buy from, with their orders, payments and what's still due. New customers and suppliers are saved automatically when you invoice or receive goods.</p>
+      </div>
+      <div class="row" data-write>
+        <button class="btn" type="button" id="addSupplierBtn">Add supplier</button>
+        <button class="btn primary" type="button" id="addCustomerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add customer</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="k">To receive from customers</span><span class="v" id="pRecv">–</span><span class="s" id="pRecvS">&nbsp;</span></div>
+      <div class="stat" id="pOverBox"><span class="k">Overdue from customers</span><span class="v" id="pOver">–</span><span class="s" id="pOverS">&nbsp;</span></div>
+      <div class="stat"><span class="k">To pay suppliers</span><span class="v" id="pPay">–</span><span class="s" id="pPayS">&nbsp;</span></div>
+      <div class="stat"><span class="k">Received this month</span><span class="v" id="pMonth">–</span><span class="s" id="pMonthS">&nbsp;</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Customers or suppliers">
+        <button type="button" data-ptype="customer" aria-pressed="true">Customers</button>
+        <button type="button" data-ptype="supplier" aria-pressed="false">Suppliers</button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="input" id="partyQ" type="search" placeholder="Search name, city, phone or GSTIN" aria-label="Search customers and suppliers">
+      </div>
+      <select class="input" id="partyFilter" style="width:auto" aria-label="Filter by balance">
+        <option value="all">Everyone</option>
+        <option value="due">With money due</option>
+        <option value="overdue">Overdue only</option>
+      </select>
+    </div>
+    <div class="rlist" id="partyList"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="v-settings" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Business details</h2>
+        <p>These appear on every invoice. Changes apply to new invoices only; old invoices keep the details they were issued with.</p>
+      </div>
+    </div>
+    <form class="card" id="setForm" style="max-width:760px">
+      <div class="fields">
+        <label class="field full">Business name<input id="s-name" placeholder="Your company name"></label>
+        <label class="field full">Address<textarea id="s-address" placeholder="Building, street, area"></textarea></label>
+        <label class="field">City / town<input id="s-city" placeholder="Pune"></label>
+        <label class="field">PIN code<input id="s-pin" inputmode="numeric" maxlength="6" placeholder="411001"></label>
+        <label class="field">GSTIN<input id="s-gstin" style="text-transform:uppercase" placeholder="27AAAAA0000A1Z5"></label>
+        <label class="field">State<select id="s-state"></select></label>
+        <label class="field">Phone<input id="s-phone"></label>
+        <label class="field">Email<input id="s-email" type="email"></label>
+        <label class="field">Invoice prefix<input id="s-prefix" placeholder="INV" maxlength="5"><span class="hint">Up to 5 letters or digits. Numbers look like INV/25-26/0001, which fits the e-invoice limit of 16 characters.</span></label>
+        <label class="field">Default GST %<input id="s-gst" type="number" min="0" step="0.5" placeholder="18"></label>
+        <label class="field full check"><input type="checkbox" id="s-incl"> <span>Selling prices already include GST<br><span class="hint">When ticked, tax is worked out backwards from the price.</span></span></label>
+        <label class="field full">Bank details for payment<textarea id="s-bank" placeholder="Bank, account no., IFSC, UPI ID"></textarea></label>
+        <label class="field full">Terms printed on invoice<textarea id="s-terms" placeholder="Goods once sold will not be taken back. Warranty as per manufacturer."></textarea></label>
+      </div>
+      <div class="row" data-write><button class="btn primary" type="submit">Save details</button></div>
+    </form>
+  </section>
+</div>
+
+<datalist id="productOptions"></datalist>
+<datalist id="catOptions"></datalist>
+
+<!-- Product dialog -->
+<dialog id="pDlg">
+  <form class="dlg" id="pForm" novalidate>
+    <div class="dlg-head">
+      <div class="grow"><h3 id="pTitle">Add product</h3><p class="muted small" id="pSub"></p></div>
+      <button type="button" class="close" data-close aria-label="Close">×</button>
+    </div>
+    <div id="pStockBlock" style="display:grid;gap:14px"></div>
+    <div class="section-t">Product details</div>
+    <div class="fields">
+      <label class="field full">Product name<input id="p-name" placeholder="Submersible pump 7.5 HP"></label>
+      <label class="field">Product code / SKU<input id="p-code" placeholder="PMP-SUB-75"></label>
+      <label class="field">Factory barcode <span class="hint">EAN/GTIN, if the box has one</span><input id="p-barcode" placeholder="8901234567890"></label>
+      <label class="field">Category<input id="p-category" list="catOptions" placeholder="Pump"></label>
+      <label class="field">Brand<input id="p-brand"></label>
+      <label class="field">Model<input id="p-model"></label>
+      <label class="field">Rating<input id="p-rating" placeholder="7.5 HP / 5.5 kW, 540 Wp, 150 Ah"></label>
+      <label class="field">Supply<input id="p-supply" placeholder="415 V · 3-phase"></label>
+      <label class="field">Unit<input id="p-unit" placeholder="pcs"></label>
+      <label class="field">GST unit code <span class="hint">for e-invoice</span><select id="p-uqc"></select></label>
+      <label class="field">Selling price (₹)<input id="p-price" type="number" min="0" step="0.01"></label>
+      <label class="field">Cost price (₹)<input id="p-cost" type="number" min="0" step="0.01"></label>
+      <label class="field">MRP (₹)<input id="p-mrp" type="number" min="0" step="0.01"></label>
+      <label class="field">HSN code<input id="p-hsn" inputmode="numeric" maxlength="8" placeholder="841370"><span class="hint">6 or 8 digits, required on e-invoices</span></label>
+      <label class="field">GST %<input id="p-gst" type="number" min="0" step="0.5"></label>
+      <label class="field">Reorder when stock is at or below<input id="p-reorderAt" type="number" min="0" step="1"></label>
+      <label class="field full check"><input type="checkbox" id="p-serialized"> <span>Track serial numbers for this product<br><span class="hint">Each unit gets scanned in and out by its serial number.</span></span></label>
+      <label class="field full">Notes<textarea id="p-notes"></textarea></label>
+    </div>
+    <div class="err" id="pErr" hidden></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="pDelete" hidden data-write>Delete product</button>
+      <div class="row">
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="submit" class="btn primary" id="pSave" data-write>Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Import dialog -->
+<dialog id="iDlg" class="wide">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div class="grow"><h3>Import catalogue</h3><p class="muted small">Add many products at once from Excel or CSV. Stock can be added later by receiving goods.</p></div>
+      <button type="button" class="close" data-close aria-label="Close">×</button>
+    </div>
+    <div id="iBody" style="display:grid;gap:14px"></div>
+  </div>
+</dialog>
+
+<!-- Party edit dialog -->
+<dialog id="ptDlg">
+  <form class="dlg" id="ptForm" novalidate>
+    <div class="dlg-head"><div class="grow"><h3 id="ptTitle">Add customer</h3></div><button type="button" class="close" data-close aria-label="Close">×</button></div>
+    <div class="fields">
+      <label class="field full">Name<input id="pt-name" placeholder="Business name"></label>
+      <label class="field">Type<select id="pt-type"><option value="customer">Customer</option><option value="supplier">Supplier</option></select></label>
+      <label class="field">Contact person<input id="pt-contact"></label>
+      <label class="field">Phone<input id="pt-phone" inputmode="tel"></label>
+      <label class="field">Email<input id="pt-email" type="email"></label>
+      <label class="field">GSTIN<input id="pt-gstin" style="text-transform:uppercase"></label>
+      <label class="field">State<select id="pt-state"></select></label>
+      <label class="field full">Address<input id="pt-address"></label>
+      <label class="field">City / town<input id="pt-city"></label>
+      <label class="field">PIN code<input id="pt-pin" inputmode="numeric" maxlength="6"></label>
+      <label class="field">Credit period (days)<input id="pt-creditDays" type="number" min="0" step="1" placeholder="30"><span class="hint">Bills become overdue after this many days</span></label>
+      <label class="field">Opening balance (₹)<input id="pt-openingBalance" type="number" step="0.01" placeholder="0"><span class="hint">What was already due before using this app</span></label>
+      <label class="field full">Notes<textarea id="pt-notes"></textarea></label>
+    </div>
+    <div class="err" id="ptErr" hidden></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="ptDelete" hidden>Delete</button>
+      <div class="row"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary" id="ptSave">Save</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Payment dialog -->
+<dialog id="payDlg">
+  <form class="dlg" id="payForm" novalidate>
+    <div class="dlg-head"><div class="grow"><h3 id="payTitle">Record payment</h3><p class="muted small" id="paySub"></p></div><button type="button" class="close" data-close aria-label="Close">×</button></div>
+    <div class="fields">
+      <label class="field">Amount (₹)<input id="pay-amount" type="number" min="0" step="0.01"></label>
+      <label class="field">Date<input id="pay-date" type="date"></label>
+      <label class="field">Mode<select id="pay-mode"><option>UPI</option><option>NEFT / RTGS</option><option>Cheque</option><option>Cash</option><option>Card</option><option>Other</option></select></label>
+      <label class="field">Reference <span class="hint">UTR, cheque no.</span><input id="pay-ref"></label>
+      <label class="field full">Apply to<select id="pay-doc"></select></label>
+      <label class="field full">Note<input id="pay-note"></label>
+    </div>
+    <div class="err" id="payErr" hidden></div>
+    <div class="dlg-foot"><span></span><div class="row"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary" id="paySave">Save payment</button></div></div>
+  </form>
+</dialog>
+
+<datalist id="customerOptions"></datalist>
+<datalist id="supplierOptions"></datalist>
+
+<!-- Invoice / receipt viewer -->
+<dialog id="vDlg" class="wide">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div class="grow"><h3 id="vTitle"></h3><p class="muted small" id="vSub"></p></div>
+      <button type="button" class="close" data-close aria-label="Close">×</button>
+    </div>
+    <div id="vBody" style="display:grid;gap:14px"></div>
+    <div class="dlg-foot" id="vFoot"></div>
+  </div>
+</dialog>
+
+<input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = (v) => { const n = parseFloat(String(v ?? "").replace(/[,₹\s]/g, "")); return Number.isFinite(n) ? n : 0; };
+  const K = (s) => String(s ?? "").trim().toUpperCase();
+  const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const f0 = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+  const f2 = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rs = (n) => "₹" + f0.format(n);
+  const rs2 = (n) => "₹" + f2.format(n);
+  const today = () => new Date().toLocaleDateString("en-CA");
+  const fdate = (d) => { if (!d) return ""; const t = new Date(d.length === 10 ? d + "T00:00:00" : d); return isNaN(t) ? d : t.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); };
+  const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("pss:" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("pss:" + k, JSON.stringify(v)); } catch (e) {} },
+  };
+
+  const DEFAULT_CATS = ["Pump", "Motor", "Solar panel", "Inverter", "Rooftop kit", "Battery", "Controller", "Structure", "Cable", "Spares"];
+  const SERIAL_CATS = ["pump", "motor", "solar panel", "inverter", "battery", "controller"];
+  const STATES = ["Andaman & Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra & Nagar Haveli and Daman & Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu & Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"];
+  const LIB = {
+    pdf: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+    bar: "https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js",
+    xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+    zx: "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js",
+    qr: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js",
+    zxw: "https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js",
+  };
+  const libs = {};
+  function lib(k) {
+    if (!libs[k]) libs[k] = new Promise((res, rej) => {
+      const s = document.createElement("script"); s.src = LIB[k]; s.onload = res;
+      s.onerror = () => { delete libs[k]; rej(new Error("Couldn't load a helper library. Check your connection and try again.")); };
+      document.head.appendChild(s);
+    });
+    return libs[k];
+  }
+
+  // ---------- State ----------
+  const S = { db: null, dl: null, canWrite: true, products: [], receipts: [], invoices: [], adjustments: [], parties: [], payments: [], settings: {}, ready: { p: false, r: false, i: false, a: false, pt: false, pm: false } };
+  let pmap = new Map(), codeIdx = new Map(), gtinIdx = new Map(), stock = new Map(), serialIdx = new Map(), inSerials = new Map();
+  let view = store.get("view", "stock");
+  let catFilter = "All", recTab = "inv";
+  let rcv = store.get("rcv", null) || freshRcv();
+  let sell = store.get("sell", null) || freshSell();
+  function freshRcv() { return { supplier: "", partyId: null, ref: "", billAmount: "", date: today(), notes: "", lines: [], active: null }; }
+  function freshSell() { return { customer: { name: "", phone: "", gstin: "", state: "", address: "", city: "", pin: "", so: "", vehicle: "", distance: "", transName: "", transId: "" }, lines: [], active: null }; }
+  const saveRcv = () => store.set("rcv", rcv);
+  const saveSell = () => store.set("sell", sell);
+  const prod = (id) => pmap.get(id);
+  const qtyOf = (id) => stock.get(id) || 0;
+  const levelOf = (p) => { const q = qtyOf(p.id); return q <= 0 ? "out" : q <= num(p.reorderAt) ? "low" : "ok"; };
+  const LEVEL = { ok: "In stock", low: "Low", out: "Out of stock" };
+
+  function rebuild() {
+    pmap = new Map(S.products.map((p) => [p.id, p]));
+    codeIdx = new Map(); gtinIdx = new Map();
+    for (const p of S.products) {
+      if (p.code) codeIdx.set(K(p.code), p.id);
+      if (p.barcode) {
+        codeIdx.set(K(p.barcode), p.id);
+        const b = String(p.barcode).trim();
+        if (/^\d+$/.test(b)) gtinIdx.set(b.replace(/^0+/, ""), p.id);
+      }
+    }
+    stock = new Map(); serialIdx = new Map();
+    const ev = [];
+    S.receipts.forEach((d) => ev.push(["r", d]));
+    S.adjustments.forEach((d) => ev.push(["a", d]));
+    S.invoices.forEach((d) => ev.push(["i", d]));
+    ev.sort((a, b) => String(a[1].createdAt || "").localeCompare(String(b[1].createdAt || "")));
+    const add = (pid, q) => stock.set(pid, (stock.get(pid) || 0) + q);
+    for (const [t, d] of ev) for (const l of d.lines || []) {
+      const q = num(l.qty);
+      if (t === "i") {
+        add(l.pid, -q);
+        (l.serials || []).forEach((sn) => serialIdx.set(K(sn), { sn, pid: l.pid, st: "sold", ref: d.no, refId: d.id }));
+      } else {
+        add(l.pid, q);
+        (l.serials || []).forEach((sn) => serialIdx.set(K(sn), { sn, pid: l.pid, st: "in", ref: d.no || "Adjustment", refId: d.id }));
+        (l.serialsOut || []).forEach((sn) => serialIdx.set(K(sn), { sn, pid: l.pid, st: "removed", ref: d.reason || "Removed" }));
+      }
+    }
+    inSerials = new Map();
+    for (const e of serialIdx.values()) if (e.st === "in") { if (!inSerials.has(e.pid)) inSerials.set(e.pid, []); inSerials.get(e.pid).push(e.sn); }
+  }
+
+  // ---------- Small UI helpers ----------
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2600); }
+  function banner(msg) { $("banner").textContent = msg; $("banner").hidden = !msg; }
+  let actx;
+  function beep(ok) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain(), d = ok ? 0.12 : 0.32;
+      o.type = ok ? "sine" : "square"; o.frequency.value = ok ? 1320 : 196;
+      g.gain.setValueAtTime(ok ? 0.08 : 0.05, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + d);
+      o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+    } catch (e) {}
+  }
+  // Repaint a region, but never while someone is typing inside it.
+  function paint(el, html) {
+    const a = document.activeElement;
+    if (a && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) { el._pending = html; return; }
+    el.innerHTML = html; el._pending = null;
+  }
+  document.addEventListener("focusout", () => setTimeout(() => {
+    document.querySelectorAll("#rcvLines,#sellLines").forEach((el) => {
+      if (el._pending != null && !el.contains(document.activeElement)) { el.innerHTML = el._pending; el._pending = null; }
+    });
+  }, 0));
+  function applyWriteGate() {
+    document.querySelectorAll("[data-write]").forEach((el) => (el.hidden = !S.canWrite));
+  }
+  function writeFailed(e) {
+    const code = e && e.code;
+    if (code === "invalid_argument" || code === "not_granted") {
+      S.canWrite = false; applyWriteGate(); renderAll();
+      banner("You have view-only access, so changes can't be saved. Ask the owner to give you Contributor access.");
+    } else if (code === "quota_exceeded") toast("Storage is full. Delete old products or records, then try again.");
+    else toast("Couldn't save. Check your connection and try again.");
+  }
+  async function saveFile(filename, data) {
+    if (!S.dl) { toast("Downloads aren't available in this view. Open the page on claude.ai."); return; }
+    try { await S.dl.save({ filename, data }); }
+    catch (e) { if (e && e.code !== "declined") toast("Couldn't save the file" + (e && e.message ? ": " + e.message : ".")); }
+  }
+  const col = (name) => S.db.collection(name);
+
+  // ---------- Scan parsing ----------
+  function lookupCode(s) {
+    const k = K(s); if (!k) return null;
+    if (codeIdx.has(k)) return codeIdx.get(k);
+    if (/^\d{8,14}$/.test(k)) return gtinIdx.get(k.replace(/^0+/, "")) || null;
+    return null;
+  }
+  function parseScan(raw) {
+    let s = String(raw || "").replace(/\x1d/g, "|").replace(/[\x00-\x1f]/g, "").trim();
+    s = s.replace(/^\][A-Za-z]\d/, "");
+    // GS1: (01)GTIN(21)SERIAL or 01GTIN21SERIAL
+    let m = s.match(/^\(01\)(\d{14})(?:\(21\)(.+))?$/) || s.match(/^01(\d{14})(?:\|?21([^|]+))?/);
+    if (m) { const pid = gtinIdx.get(m[1].replace(/^0+/, "")) || null; if (pid) return { pid, serial: m[2] ? m[2].trim() : null, raw: s }; }
+    // Our labels: CODE*SERIAL (also | ; ~)
+    const parts = s.split(/[*|;~]/);
+    if (parts.length === 2 && parts[1].trim()) { const pid = lookupCode(parts[0]); if (pid) return { pid, serial: parts[1].trim(), raw: s }; }
+    const pid = lookupCode(s);
+    if (pid) return { pid, serial: null, raw: s };
+    return { pid: null, serial: null, raw: s };
+  }
+
+  // ---------- Scan panel ----------
+  const fbTimers = {};
+  function mountScan(containerId, prefix, handler) {
+    $(containerId).innerHTML = `
+      <div class="scan-box">
+        <label class="scan-field" for="${prefix}-scan" id="${prefix}-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+          <input id="${prefix}-scan" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Scan a barcode or type a code">
+          <span class="scan-state" id="${prefix}-state">Tap here to scan</span>
+        </label>
+        <button class="btn" type="button" id="${prefix}-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Scan from photo</button>
+      </div>
+      <div class="active-hint" id="${prefix}-active" hidden></div>
+      <div class="feedback" id="${prefix}-fb" hidden></div>
+      <p class="scan-help">Works with USB and Bluetooth barcode scanners: click the box, then scan. On a phone, use <b>Scan from photo</b> to snap the barcode. Typing a code and pressing Enter works too.</p>`;
+    const input = $(prefix + "-scan"), field = $(prefix + "-field");
+    input.addEventListener("focus", () => { field.classList.add("armed"); $(prefix + "-state").textContent = "Ready to scan"; });
+    input.addEventListener("blur", () => { field.classList.remove("armed"); $(prefix + "-state").textContent = "Tap here to scan"; });
+    input.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === "Tab") && input.value.trim()) { e.preventDefault(); const v = input.value; input.value = ""; handler(v); }
+    });
+    $(prefix + "-photo").addEventListener("click", () => {
+      const pi = $("photoInput"); pi.value = ""; pi.onchange = async () => {
+        const f = pi.files && pi.files[0]; if (!f) return;
+        feedback(prefix, "info", "Reading barcode from photo…");
+        try {
+          const codes = await decodePhoto(f, (i, n) => { if (i > 1) feedback(prefix, "info", `Reading barcode from photo… (looking closer, ${i} of ${n})`); }, (t) => !!(parseScan(t).pid || serialIdx.has(K(t))));
+          if (!codes.length) { feedback(prefix, "err", `No barcode found in that photo. Fill most of the photo with the barcode, keep it flat, sharp and without glare, and try again. You can also type the number in the scan box.<br><small style="opacity:.75">${esc(lastScanInfo)}</small>`); beep(false); return; }
+          codes.sort((a, b) => (lookupCode(b) ? 1 : 0) - (lookupCode(a) ? 1 : 0));
+          codes.forEach((c) => handler(c));
+        } catch (e) { feedback(prefix, "err", `Couldn't read that photo: ${esc(e && e.message ? e.message : String(e))}<br><small style="opacity:.75">${esc(lastScanInfo)}</small>`); }
+      };
+      pi.click();
+    });
+  }
+  function feedback(prefix, kind, msg, action) {
+    const el = $(prefix + "-fb");
+    el.className = "feedback " + kind; el.hidden = false;
+    el.innerHTML = `<span>${msg}</span>`;
+    if (action) { const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = action.label; b.onclick = action.fn; el.appendChild(b); }
+    void el.offsetWidth; el.classList.add("flash");
+    if (kind === "ok" || kind === "err" || kind === "warn") beep(kind === "ok");
+    clearTimeout(fbTimers[prefix]);
+  }
+  function activeHint(prefix, pid, onDone) {
+    const el = $(prefix + "-active");
+    const p = pid && prod(pid);
+    if (!p) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = `<span>Scanning serial numbers for <b>${esc(p.name)}</b></span><button type="button" class="btn">Done with this product</button>`;
+    el.querySelector("button").onclick = onDone;
+  }
+  // Phone photos are large, often rotated and the barcode is small in frame, so read a few prepared frames:
+  // downscaled, turned 90°, and centre crops, with two binarizers. The phone's own detector is tried first where it exists.
+  async function loadPhoto(file) {
+    try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) {}
+    try { return await createImageBitmap(file); } catch (e) {}
+    const url = URL.createObjectURL(file);
+    try { return await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("Couldn't open that photo. Take it again, or choose a JPEG or PNG.")); im.src = url; }); }
+    finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  }
+  // iPhone Safari caps each canvas at 16.7 M pixels and all canvases together at a few hundred MB, and 24 MP photos
+  // blow through both. So: copy the photo once into a base canvas of at most 4096 px, free the original, and reuse
+  // one scratch canvas (at most 3600 px) for every attempt; release both when the scan ends.
+  const BASE_MAX = 4096, WORK_MAX = 3600;
+  let baseCv = null, workCv = null;
+  function ctx2d(cv) { const g = cv.getContext("2d", { willReadFrequently: true }); if (!g) throw new Error("The phone ran out of memory for this photo"); return g; }
+  function makeBase(img) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, k = Math.min(1, BASE_MAX / Math.max(iw, ih));
+    baseCv = baseCv || document.createElement("canvas");
+    baseCv.width = Math.max(1, Math.round(iw * k)); baseCv.height = Math.max(1, Math.round(ih * k));
+    const g = ctx2d(baseCv); g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, baseCv.width, baseCv.height);
+    if (img.close) img.close();
+    return baseCv;
+  }
+  function releaseCanvases() { [baseCv, workCv].forEach((c) => { if (c) { c.width = 0; c.height = 0; } }); }
+  function workCtx(w, h) { workCv = workCv || document.createElement("canvas"); workCv.width = w; workCv.height = h; return ctx2d(workCv); }
+  function rgbaRegion(src, sx, sy, sw, sh, scale) {
+    const k = Math.min(scale, WORK_MAX / Math.max(sw, sh)), w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
+    const g = workCtx(w, h); g.imageSmoothingQuality = "high"; g.drawImage(src, sx, sy, sw, sh, 0, 0, w, h);
+    return g.getImageData(0, 0, w, h);
+  }
+  function grayFrame(img, crop, maxSide, rot) {
+    const iw = img.width, ih = img.height;
+    const cw = iw * crop, ch = ih * crop, sx = (iw - cw) / 2, sy = (ih - ch) / 2;
+    const k = Math.min(1, Math.min(maxSide, WORK_MAX) / Math.max(cw, ch)), w = Math.max(1, Math.round(cw * k)), h = Math.max(1, Math.round(ch * k));
+    const turn = rot % 180 !== 0, W = turn ? h : w, H = turn ? w : h, g = workCtx(W, H);
+    g.translate(W / 2, H / 2); g.rotate((rot * Math.PI) / 180);
+    g.drawImage(img, sx, sy, cw, ch, -w / 2, -h / 2, w, h);
+    const d = g.getImageData(0, 0, W, H).data, out = new Uint8ClampedArray(W * H);
+    for (let i = 0, j = 0; j < out.length; i += 4, j++) out[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8;
+    return { out, w: W, h: H };
+  }
+  // Photo decoding, strongest first: the phone's own detector, then ZXing C++ (WebAssembly, published beside the page),
+  // then zxing-js. Retail codes (EAN/UPC…) have weak checksums and misread on tilted or blurry photos, so they are
+  // accepted at once only when they match something we know, otherwise only when two different frames agree.
+  let lastScanInfo = "";
+  async function decodePhoto(file, onStep, known) {
+    const img = await loadPhoto(file), info = [`photo ${img.naturalWidth || img.width}×${img.naturalHeight || img.height}`];
+    try {
+      if ("BarcodeDetector" in window) {
+        try { const r = await new window.BarcodeDetector().detect(img); if (r.length) return [...new Set(r.map((x) => x.rawValue))]; info.push("built-in reader: none"); } catch (e) { info.push("built-in reader failed"); }
+      }
+      const base = makeBase(img);
+      let wasmReady = false;
+      try { await lib("zxw"); await window.ZXingWASM.prepareZXingModule({ overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", document.baseURI).href : prefix + path }, fireImmediately: true }); wasmReady = true; }
+      catch (e) { info.push("ZXing C++ unavailable: " + (e && e.message ? e.message : e)); }
+      if (wasmReady) {
+        try { const r = await decodeWasm(base, onStep, known); if (r.length) return r; info.push("ZXing C++: none"); }
+        catch (e) { info.push("ZXing C++ error: " + (e && e.message ? e.message : e)); }
+      }
+      try { const r = await decodeJs(base, onStep, known); if (r.length) return r; info.push("zxing-js: none"); }
+      catch (e) { info.push("zxing-js error: " + (e && e.message ? e.message : e)); }
+      return [];
+    } finally { lastScanInfo = info.join(" · "); releaseCanvases(); try { if (img.close) img.close(); } catch (e) {} }
+  }
+  async function decodeWasm(base, onStep, known) {
+    const Zw = window.ZXingWASM, weak = new Set(["EAN-13", "EAN-8", "UPC-A", "UPC-E", "ITF", "Codabar", "Code39"]);
+    const opts = { formats: ["Code128", "EAN-13", "EAN-8", "UPC-A", "UPC-E", "Code39", "Code93", "ITF", "Codabar", "QRCode", "DataMatrix", "PDF417"], tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, maxNumberOfSymbols: 8 };
+    const iw = base.width, ih = base.height;
+    const plan = [() => rgbaRegion(base, 0, 0, iw, ih, 1)];
+    for (const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) plan.push(() => rgbaRegion(base, iw * (fx - 0.3), ih * (fy - 0.3), iw * 0.6, ih * 0.6, 1.6));
+    const seen = new Map(), found = [];
+    for (let i = 0; i < plan.length; i++) {
+      if (onStep) onStep(i + 1, plan.length);
+      await new Promise((r) => setTimeout(r, 0));
+      const res = (await Zw.readBarcodes(plan[i](), opts)).filter((x) => x.isValid && x.text);
+      for (const x of res) {
+        const frames = seen.get(x.text) || new Set(); frames.add(i); seen.set(x.text, frames);
+        if ((!weak.has(x.format) || (known && known(x.text)) || frames.size >= 2) && !found.includes(x.text)) found.push(x.text);
+      }
+      if (found.length) return found;
+    }
+    return [];
+  }
+  async function decodeJs(img, onStep, known) {
+    await lib("zx");
+    const Z = window.ZXing, F = Z.BarcodeFormat, hints = new Map();
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_39, F.CODE_93, F.ITF, F.CODABAR, F.QR_CODE, F.DATA_MATRIX]);
+    const reader = new Z.MultiFormatReader(); reader.setHints(hints);
+    const plan = [[1, 1600, 0], [1, 1600, 90], [0.6, 1600, 0], [0.6, 1600, 90], [1, 2600, 0], [0.35, 1400, 0], [0.35, 1400, 90], [0.6, 2600, 0], [0.22, 1200, 0], [0.22, 1200, 90], [1, 1000, 0], [1, 2600, 90]];
+    // Retail codes (EAN/UPC/ITF…) have weak checksums and can misread on blurry photos, so two different frames must agree.
+    const weak = new Set([F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR, F.CODE_39]);
+    const seen = new Map();
+    for (let i = 0; i < plan.length; i++) {
+      if (onStep) onStep(i + 1, plan.length);
+      await new Promise((r) => setTimeout(r, 0));
+      const [crop, size, rot] = plan[i], f = grayFrame(img, crop, size, rot);
+      for (const Bin of [Z.HybridBinarizer, Z.GlobalHistogramBinarizer]) {
+        let res = null;
+        try { res = reader.decode(new Z.BinaryBitmap(new Bin(new Z.RGBLuminanceSource(f.out, f.w, f.h))), hints); } catch (e) {}
+        if (!res || !res.getText()) continue;
+        const t = res.getText(), frames = seen.get(t) || new Set();
+        frames.add(i); seen.set(t, frames);
+        if (!weak.has(res.getBarcodeFormat()) || (known && known(t)) || frames.size >= 2) return [t];
+      }
+    }
+    return [];
+  }
+
+  function pickProduct(inputId) {
+    const v = $(inputId).value.trim(); if (!v) return null;
+    const code = v.split(" — ")[0];
+    let pid = lookupCode(code) || lookupCode(v);
+    if (!pid) { const lv = v.toLowerCase(); const m = S.products.find((p) => String(p.name).toLowerCase() === lv) || S.products.find((p) => String(p.name).toLowerCase().includes(lv)); pid = m && m.id; }
+    if (!pid) { toast("No product matches “" + v + "”."); return null; }
+    $(inputId).value = "";
+    return pid;
+  }
+
+  // ---------- STOCK VIEW ----------
+  function renderStock() {
+    const ready = S.ready.p;
+    let units = 0, value = 0, low = 0, out = 0;
+    S.products.forEach((p) => { const q = Math.max(0, qtyOf(p.id)); units += q; value += q * num(p.cost); const l = levelOf(p); if (l === "low") low++; if (l === "out") out++; });
+    const cats = new Map(); S.products.forEach((p) => { const c = p.category || "Other"; cats.set(c, (cats.get(c) || 0) + 1); });
+    $("sProducts").textContent = ready ? f0.format(S.products.length) : "–";
+    $("sProductsS").textContent = ready ? cats.size + (cats.size === 1 ? " category" : " categories") : " ";
+    $("sUnits").textContent = ready ? f0.format(units) : "–";
+    const serialCount = [...inSerials.values()].reduce((a, b) => a + b.length, 0);
+    $("sUnitsS").textContent = ready ? f0.format(serialCount) + " with serial numbers" : " ";
+    $("sValue").textContent = ready ? (value >= 1e7 ? "₹" + (value / 1e7).toFixed(2) + " Cr" : value >= 1e5 ? "₹" + (value / 1e5).toFixed(2) + " L" : rs(value)) : "–";
+    $("sLow").textContent = ready ? low + out : "–";
+    $("sLowS").textContent = ready ? `${low} running low · ${out} out of stock` : " ";
+    $("sLowBox").classList.toggle("attn", low + out > 0);
+
+    if (catFilter !== "All" && !cats.has(catFilter)) catFilter = "All";
+    const catList = [...cats.keys()].sort((a, b) => { const ia = DEFAULT_CATS.indexOf(a), ib = DEFAULT_CATS.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+    $("catChips").innerHTML = (S.products.length ? ["All", ...catList] : []).map((c) =>
+      `<button type="button" class="chip" data-cat="${esc(c)}" aria-pressed="${c === catFilter}">${esc(c)}<b>${c === "All" ? S.products.length : cats.get(c)}</b></button>`).join("");
+
+    const q = $("stockQ").value.trim().toLowerCase(), lvl = $("stockLevel").value;
+    const serialHit = q ? serialIdx.get(K(q)) : null;
+    const shown = S.products.filter((p) => {
+      if (catFilter !== "All" && (p.category || "Other") !== catFilter) return false;
+      const l = levelOf(p);
+      if (lvl === "attn" && l === "ok") return false;
+      if (lvl === "in" && l === "out") return false;
+      if (!q) return true;
+      if (serialHit && serialHit.pid === p.id) return true;
+      return [p.name, p.code, p.brand, p.model, p.rating, p.barcode, p.category].some((f) => String(f || "").toLowerCase().includes(q));
+    }).sort((a, b) => ({ out: 0, low: 1, ok: 2 }[levelOf(a)] - { out: 0, low: 1, ok: 2 }[levelOf(b)]) || String(a.name).localeCompare(String(b.name)));
+
+    const el = $("plist");
+    if (!ready) { el.innerHTML = `<div class="empty"><h3>${S.db === false ? "Stock data isn't available here" : "Loading your stock…"}</h3>${S.db === false ? "<p>Open this page on claude.ai while signed in to see and manage stock.</p>" : ""}</div>`; return; }
+    if (!S.products.length) {
+      el.innerHTML = `<div class="empty"><h3>Start with your catalogue</h3><p>Import your product list from Excel or CSV, or add products one at a time. You can receive stock against them afterwards.</p>
+        <div class="row" ${S.canWrite ? "" : "hidden"}><button class="btn primary" type="button" data-act="import">Import catalogue</button><button class="btn" type="button" data-act="add">Add a product</button></div></div>`;
+      return;
+    }
+    if (!shown.length) { el.innerHTML = `<div class="empty"><h3>Nothing matches</h3><p>Try another category, stock level or search.</p></div>`; return; }
+    el.innerHTML = `<div class="phead"><span>Product</span><span>Category</span><span>Rating</span><span>Price</span><span class="ta-r">In stock</span></div>` +
+      shown.map((p) => {
+        const l = levelOf(p), qn = qtyOf(p.id);
+        return `<button type="button" class="prow" data-pid="${esc(p.id)}">
+          <span class="p-main"><span class="p-name">${esc(p.name)}</span><span class="p-meta"><code>${esc(p.code || "no code")}</code>${p.brand || p.model ? " · " + esc([p.brand, p.model].filter(Boolean).join(" ")) : ""}${p.serialized ? " · serial tracked" : ""}</span></span>
+          <span class="p-cat">${esc(p.category || "Other")}</span>
+          <span class="p-spec">${esc(p.rating || "—")}<small>${esc(p.supply || "")}</small></span>
+          <span class="p-price">${num(p.price) ? rs(num(p.price)) : num(p.mrp) ? `<span class="muted">MRP ${rs(num(p.mrp))}</span>` : "—"}<small>${num(p.price) ? "" : "No selling price · "}GST ${num(p.gst ?? defGst())}%</small></span>
+          <span class="p-stock"><span><b>${f0.format(qn)}</b> <span class="u">${esc(p.unit || "pcs")}</span></span><span class="pill ${l}">${LEVEL[l]}</span></span>
+        </button>`;
+      }).join("");
+  }
+  const defGst = () => (S.settings.gst === "" || S.settings.gst == null ? 18 : num(S.settings.gst));
+
+  // ---------- Product dialog ----------
+  const PF = ["name", "code", "barcode", "category", "brand", "model", "rating", "supply", "unit", "uqc", "price", "cost", "mrp", "hsn", "gst", "reorderAt", "notes"];
+  let editing = null;
+  async function openProduct(pid, preset) {
+    editing = pid || null;
+    const p = pid ? prod(pid) : null;
+    $("pTitle").textContent = p ? p.name : "Add product";
+    $("pSub").textContent = p ? [p.code, p.category].filter(Boolean).join(" · ") : "Add it to the catalogue. Stock is added when you receive goods.";
+    PF.forEach((k) => { $("p-" + k).value = p ? (p[k] ?? "") : ""; });
+    if (!p) { $("p-unit").value = "pcs"; $("p-gst").value = defGst(); $("p-reorderAt").value = 0; $("p-category").value = catFilter !== "All" ? catFilter : ""; }
+    if (preset) Object.keys(preset).forEach((k) => { if ($("p-" + k)) $("p-" + k).value = preset[k]; });
+    $("p-uqc").value = (p && p.uqc) || uqcFor($("p-unit").value);
+    $("p-serialized").checked = p ? !!p.serialized : true;
+    $("pDelete").hidden = !p || !S.canWrite; $("pDelete").classList.remove("armed"); $("pDelete").textContent = "Delete product";
+    $("pErr").hidden = true;
+    renderProductStock();
+    $("pDlg").showModal();
+    if (!p) $("p-name").focus();
+  }
+  function renderProductStock() {
+    const blk = $("pStockBlock"), p = editing && prod(editing);
+    if (!p) { blk.innerHTML = ""; return; }
+    const q = qtyOf(p.id), sns = (inSerials.get(p.id) || []).slice().sort();
+    let sold = 0; for (const inv of S.invoices) for (const l of inv.lines || []) if (l.pid === p.id) sold += num(l.qty);
+    blk.innerHTML = `
+      <div class="kv"><div><b>${f0.format(q)}</b><span>${esc(p.unit || "pcs")} in stock</span></div><div><b>${f0.format(sns.length)}</b><span>serial numbers on hand</span></div><div><b>${f0.format(sold)}</b><span>sold so far</span></div></div>
+      ${p.code ? `<div class="barcode-box"><svg id="pBarcode" role="img" aria-label="Barcode for ${esc(p.code)}"></svg></div>
+      <div class="row"><button type="button" class="btn" id="pLabel">Download product barcode labels</button>${sns.length ? `<button type="button" class="btn" id="pSnLabels">Download labels for ${sns.length} serials</button>` : ""}</div>` : ""}
+      ${p.serialized ? `<div class="section-t">Serial numbers in stock</div>
+        ${sns.length ? `<div class="serials">${sns.map((s) => `<span class="sn">${esc(s)}${S.canWrite ? `<button type="button" data-rm-sn="${esc(s)}" title="Remove from stock (damaged, lost or returned)" aria-label="Remove ${esc(s)} from stock">×</button>` : ""}</span>`).join("")}</div><p class="hint" id="snHint">Tap × to take a unit out of stock if it's damaged, lost or returned to the factory.</p>` : `<p class="muted small">None yet. Serial numbers are added when you receive goods.</p>`}` : ""}
+      ${S.canWrite ? `<div class="section-t">Correct the count</div>
+      <div class="row"><label class="mini">Counted on shelf<input id="countQty" type="number" min="0" step="1" value="${q}"></label><label class="mini" style="flex:1;min-width:160px">Reason<input id="countReason" style="width:100%" placeholder="Physical stock check"></label><button type="button" class="btn" id="countApply" style="align-self:end">Update count</button></div>` : ""}`;
+    if (p.code) lib("bar").then(() => { try { window.JsBarcode("#pBarcode", p.code, { format: "CODE128", height: 60, fontSize: 14, margin: 4, background: "#ffffff", lineColor: "#111111" }); } catch (e) {} }).catch(() => {});
+    const lb = $("pLabel"); if (lb) lb.onclick = () => labelsPdf(Array.from({ length: 24 }, () => ({ title: p.name, value: p.code, line: p.code })), `labels-${p.code}.pdf`);
+    const sl = $("pSnLabels"); if (sl) sl.onclick = () => labelsPdf(sns.map((s) => ({ title: p.name, value: p.code + "*" + s, line: "S/N " + s })), `serial-labels-${p.code}.pdf`);
+    const ca = $("countApply");
+    if (ca) ca.onclick = async () => {
+      const counted = Math.max(0, Math.round(num($("countQty").value))), delta = counted - q;
+      if (!delta) { toast("Count already matches."); return; }
+      try { await col("adjustments").add({ createdAt: new Date().toISOString(), reason: $("countReason").value.trim() || "Stock count", lines: [{ pid: p.id, code: p.code || "", name: p.name, qty: delta }] }); toast(`Count updated to ${counted}`); }
+      catch (e) { writeFailed(e); }
+    };
+    blk.querySelectorAll("[data-rm-sn]").forEach((b) => b.onclick = async () => {
+      const sn = b.dataset.rmSn;
+      if (!b.classList.contains("armed")) { blk.querySelectorAll("[data-rm-sn].armed").forEach((x) => { x.classList.remove("armed"); x.textContent = "×"; }); b.classList.add("armed"); b.textContent = "Remove?"; return; }
+      try { await col("adjustments").add({ createdAt: new Date().toISOString(), reason: "Removed from stock", lines: [{ pid: p.id, code: p.code || "", name: p.name, qty: -1, serialsOut: [sn] }] }); toast(`${sn} removed from stock`); }
+      catch (e) { writeFailed(e); }
+    });
+  }
+  $("pForm").addEventListener("submit", async (e) => {
+    e.preventDefault(); if (!S.db) return;
+    const d = {}; PF.forEach((k) => d[k] = $("p-" + k).value.trim());
+    d.serialized = $("p-serialized").checked;
+    ["price", "cost", "mrp", "gst", "reorderAt"].forEach((k) => d[k] = Math.max(0, num(d[k])));
+    const err = (m) => { $("pErr").textContent = m; $("pErr").hidden = false; };
+    if (!d.name) return err("Give the product a name.");
+    if (!d.code) return err("Add a product code. It's what the barcode scanner matches on.");
+    if (d.hsn && !HSN_RE.test(d.hsn)) return err("HSN code must be 6 or 8 digits for e-invoices, for example 841370.");
+    const clash = S.products.find((x) => x.id !== editing && (K(x.code) === K(d.code) || (d.barcode && K(x.barcode) === K(d.barcode))));
+    if (clash) return err(`That code is already used by “${clash.name}”.`);
+    d.updatedAt = new Date().toISOString();
+    $("pSave").disabled = true;
+    try {
+      if (editing) { const old = prod(editing); d.createdAt = old.createdAt || d.updatedAt; await col("products").doc(editing).set(d); toast("Saved " + d.name); }
+      else { d.createdAt = d.updatedAt; await col("products").doc(newId("p_")).set(d); toast("Added " + d.name); }
+      $("pDlg").close();
+    } catch (x) { writeFailed(x); }
+    finally { $("pSave").disabled = false; }
+  });
+  $("pDelete").addEventListener("click", async () => {
+    const b = $("pDelete");
+    if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Yes, delete it"; return; }
+    const p = prod(editing);
+    try { await col("products").doc(editing).delete(); toast("Deleted " + (p ? p.name : "product")); $("pDlg").close(); } catch (e) { writeFailed(e); }
+  });
+
+  // ---------- Import ----------
+  const FIELDS = [
+    { k: "code", label: "Product code / SKU", alias: ["code", "sku", "productcode", "itemcode", "partno", "partnumber", "itemno"] },
+    { k: "name", label: "Product name", alias: ["name", "product", "productname", "item", "itemname", "description", "particulars"] },
+    { k: "category", label: "Category", alias: ["category", "type", "group", "productgroup", "itemgroup"] },
+    { k: "brand", label: "Brand", alias: ["brand", "make", "manufacturer", "company"] },
+    { k: "model", label: "Model", alias: ["model", "modelno", "modelnumber"] },
+    { k: "rating", label: "Rating", alias: ["rating", "capacity", "power", "hp", "kw", "wp", "size", "spec", "specification"] },
+    { k: "supply", label: "Supply", alias: ["supply", "voltage", "phase", "volts"] },
+    { k: "barcode", label: "Factory barcode", alias: ["barcode", "ean", "gtin", "upc"] },
+    { k: "hsn", label: "HSN code", alias: ["hsn", "hsncode", "hsnsac", "sac"] },
+    { k: "gst", label: "GST %", alias: ["gst", "gstrate", "gstpercent", "tax", "taxrate", "igst"] },
+    { k: "price", label: "Selling price", alias: ["price", "saleprice", "sellingprice", "rate", "salerate"] },
+    { k: "mrp", label: "MRP", alias: ["mrp", "maxretailprice", "listprice"] },
+    { k: "cost", label: "Cost price", alias: ["cost", "costprice", "purchaseprice", "unitcost", "purchaserate", "landedcost"] },
+    { k: "unit", label: "Unit", alias: ["unit", "uom", "units"] },
+    { k: "reorderAt", label: "Reorder level", alias: ["reorder", "reorderlevel", "minstock", "minimum", "minqty", "reorderat"] },
+    { k: "serialized", label: "Track serials (yes/no)", alias: ["serialized", "trackserial", "serialtracking", "hasserial", "serial"] },
+    { k: "openingQty", label: "Opening stock", alias: ["opening", "openingqty", "openingstock", "stock", "qty", "quantity", "onhand", "closingstock"] },
+  ];
+  let imp = null;
+  const normH = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  function openImport() { imp = null; renderImportPick(); $("iDlg").showModal(); }
+  function renderImportPick(msg) {
+    $("iBody").innerHTML = `
+      <label class="drop" id="iDrop" tabindex="0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M12 17v-6M9.5 13.5L12 11l2.5 2.5"/></svg>
+        <b>Choose an Excel or CSV file</b>
+        <span class="muted small">or drop it here · .xlsx, .xls or .csv · first row should be column headings</span>
+        <input type="file" id="iFile" accept=".xlsx,.xls,.csv,text/csv" hidden>
+      </label>
+      ${msg ? `<p class="err">${esc(msg)}</p>` : ""}
+      <div class="card" style="background:var(--surface-2);border:0">
+        <b>What to put in the file</b>
+        <p class="small muted">One row per product. <b>Product code</b> and <b>Product name</b> are required. Anything else is optional: category, brand, model, rating, supply, factory barcode, HSN, GST %, selling price, cost price, unit, reorder level, and opening stock. Existing products with the same code are updated, not duplicated.</p>
+        <div><button type="button" class="btn" id="iTemplate">Download a template</button></div>
+      </div>`;
+    const drop = $("iDrop"), file = $("iFile");
+    file.onchange = () => file.files[0] && readImport(file.files[0]);
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) readImport(f); });
+    drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } });
+    $("iTemplate").onclick = () => saveFile("catalogue-template.csv",
+      "Product code,Product name,Category,Brand,Model,Rating,Supply,Factory barcode,HSN,GST %,Selling price,Cost price,Unit,Reorder level,Track serials,Opening stock\n" +
+      "PMP-SUB-75,Submersible pump 7.5 HP,Pump,YourBrand,V4-7.5,7.5 HP / 5.5 kW,415 V 3-ph,,8413,18,45000,38500,pcs,4,yes,0\n" +
+      "PV-540,Mono PERC module 540 Wp,Solar panel,YourBrand,M10-144,540 Wp,Voc 49.6 V,,8541,5,15500,13200,pcs,40,yes,0\n");
+  }
+  async function readImport(f) {
+    $("iBody").innerHTML = `<p class="muted">Reading ${esc(f.name)}…</p>`;
+    try {
+      await lib("xlsx");
+      const wb = window.XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false }).filter((r) => r.some((c) => String(c).trim()));
+      if (rows.length < 2) return renderImportPick("That file has no product rows under the heading row.");
+      const headers = rows[0].map((h) => String(h).trim());
+      const map = headers.map((h) => { const n = normH(h); const hit = FIELDS.find((fd) => fd.alias.includes(n)) || FIELDS.find((fd) => fd.alias.some((a) => a.length > 2 && n.includes(a))); return hit ? hit.k : ""; });
+      // a field maps to one column only
+      const seen = new Set(); map.forEach((k, i) => { if (k && seen.has(k)) map[i] = ""; else if (k) seen.add(k); });
+      imp = { name: f.name, headers, rows: rows.slice(1), map, autoSerial: true };
+      renderImportMap();
+    } catch (e) { renderImportPick(e.message && /load/.test(e.message) ? e.message : "Couldn't read that file. Save it as .xlsx or .csv and try again."); }
+  }
+  function importPlan() {
+    const idx = (k) => imp.map.indexOf(k);
+    const out = [], skipped = [];
+    const seenCodes = new Set();
+    imp.rows.forEach((r, i) => {
+      const get = (k) => { const j = idx(k); return j < 0 ? "" : String(r[j] ?? "").trim(); };
+      const code = get("code"), name = get("name");
+      if (!code || !name) { skipped.push(i + 2); return; }
+      if (seenCodes.has(K(code))) { skipped.push(i + 2); return; }
+      seenCodes.add(K(code));
+      const d = { code, name };
+      ["category", "brand", "model", "rating", "supply", "barcode", "hsn", "unit"].forEach((k) => { const v = get(k); if (v) d[k] = v; });
+      ["gst", "price", "cost", "mrp", "reorderAt"].forEach((k) => { const v = get(k); if (v !== "") d[k] = Math.max(0, num(String(v).replace("%", ""))); });
+      if (d.category) { const m = DEFAULT_CATS.find((c) => c.toLowerCase() === d.category.toLowerCase()); if (m) d.category = m; }
+      const sv = get("serialized").toLowerCase();
+      if (sv) d.serialized = /^(y|yes|true|1)$/.test(sv);
+      const existing = codeIdx.get(K(code));
+      out.push({ d, pid: existing || null, opening: Math.max(0, Math.round(num(get("openingQty")))) });
+    });
+    return { out, skipped };
+  }
+  function renderImportMap() {
+    const plan = importPlan();
+    const nNew = plan.out.filter((x) => !x.pid).length, nUpd = plan.out.length - nNew;
+    const badHsn = plan.out.filter((x) => !HSN_RE.test(String(x.d.hsn || ""))).length;
+    const hasOpening = imp.map.includes("openingQty");
+    const openingTotal = plan.out.reduce((a, x) => a + x.opening, 0);
+    const missing = ["code", "name"].filter((k) => !imp.map.includes(k)).map((k) => FIELDS.find((f) => f.k === k).label);
+    const opts = (sel) => `<option value="">Skip this column</option>` + FIELDS.map((f) => `<option value="${f.k}" ${f.k === sel ? "selected" : ""}>${esc(f.label)}</option>`).join("");
+    $("iBody").innerHTML = `
+      <div class="row"><span class="pill info">${esc(imp.name)}</span><span class="muted small">${imp.rows.length} rows found. Check each column is matched to the right field.</span></div>
+      <div class="table-wrap"><table class="grid"><thead><tr>${imp.headers.map((h, i) => `<th><span class="hdr">${esc(h || "Column " + (i + 1))}</span><select data-col="${i}" aria-label="Field for column ${esc(h)}">${opts(imp.map[i])}</select></th>`).join("")}</tr></thead>
+      <tbody>${imp.rows.slice(0, 6).map((r) => `<tr>${imp.headers.map((_, i) => `<td>${esc(r[i])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+      ${imp.rows.length > 6 ? `<p class="hint">Showing the first 6 of ${imp.rows.length} rows.</p>` : ""}
+      ${missing.length ? `<p class="err">Match a column to ${missing.join(" and ")} to continue.</p>` : `
+      <div class="card" style="background:var(--surface-2);border:0;gap:10px">
+        <div class="row"><span class="pill ok">${nNew} new products</span><span class="pill neutral">${nUpd} to update</span>${plan.skipped.length ? `<span class="pill warn">${plan.skipped.length} rows skipped (missing code or name, or duplicate code)</span>` : ""}${badHsn ? `<span class="pill warn">${badHsn} without a 6 or 8 digit HSN code; add it before e-invoicing</span>` : ""}</div>
+        ${imp.map.includes("serialized") ? "" : `<label class="check"><input type="checkbox" id="iAutoSerial" ${imp.autoSerial ? "checked" : ""}><span>Track serial numbers for new pumps, motors, panels, inverters, batteries and controllers</span></label>`}
+        ${hasOpening && openingTotal ? `<p class="small muted">Opening stock of ${f0.format(openingTotal)} units will be added. Serial numbers for these units can be scanned in later; sales will accept serials for them until they run out.</p>` : ""}
+      </div>`}
+      <div class="dlg-foot"><button type="button" class="btn ghost" id="iBack">Choose a different file</button><div class="row"><button type="button" class="btn primary" id="iGo" ${missing.length || !plan.out.length ? "disabled" : ""}>Import ${plan.out.length} products</button></div></div>`;
+    $("iBody").querySelectorAll("select[data-col]").forEach((s) => s.onchange = () => {
+      const i = +s.dataset.col; if (s.value) imp.map = imp.map.map((k, j) => (k === s.value && j !== i ? "" : k)); imp.map[i] = s.value; renderImportMap();
+    });
+    const as = $("iAutoSerial"); if (as) as.onchange = () => (imp.autoSerial = as.checked);
+    $("iBack").onclick = () => { imp = null; renderImportPick(); };
+    $("iGo").onclick = () => runImport(importPlan());
+  }
+  async function runImport(plan) {
+    const total = plan.out.length; let done = 0, failed = 0;
+    $("iBody").innerHTML = `<p><b>Importing ${total} products…</b> Keep this window open.</p><div class="progress"><span id="iProg"></span></div><p class="muted small" id="iProgT">0 of ${total}</p>`;
+    const now = new Date().toISOString();
+    const queue = plan.out.slice(); const opening = [];
+    async function worker() {
+      while (queue.length) {
+        const item = queue.shift();
+        try {
+          if (item.pid) { await col("products").doc(item.pid).update(Object.assign({}, item.d, { updatedAt: now })); }
+          else {
+            const d = Object.assign({ category: "", brand: "", model: "", rating: "", supply: "", barcode: "", hsn: "", unit: "pcs", gst: defGst(), price: 0, cost: 0, reorderAt: 0, notes: "" }, item.d);
+            if (d.serialized == null) d.serialized = imp.autoSerial && SERIAL_CATS.includes(String(d.category).toLowerCase());
+            d.uqc = uqcFor(d.unit);
+            d.createdAt = now; d.updatedAt = now;
+            item.pid = newId("p_");
+            await col("products").doc(item.pid).set(d);
+          }
+          if (item.opening) opening.push({ pid: item.pid, code: item.d.code, name: item.d.name, qty: item.opening });
+        } catch (e) {
+          failed++;
+          if (e && (e.code === "invalid_argument" || e.code === "quota_exceeded")) { queue.length = 0; writeFailed(e); }
+        }
+        done++;
+        $("iProg").style.width = (done / total * 100) + "%"; $("iProgT").textContent = `${done} of ${total}`;
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    try { for (let i = 0; i < opening.length; i += 400) await col("adjustments").add({ createdAt: new Date().toISOString(), reason: "Opening stock (import)", lines: opening.slice(i, i + 400) }); }
+    catch (e) { writeFailed(e); }
+    $("iBody").innerHTML = `<div class="empty"><h3>${failed ? `Imported ${total - failed} of ${total} products` : `Imported ${total} products`}</h3>
+      <p>${failed ? `${failed} couldn't be saved. Import the same file again to retry them; nothing gets duplicated.` : "They're in your catalogue now. Receive goods to add stock and serial numbers."}</p>
+      <div class="row"><button type="button" class="btn primary" data-close>Done</button></div></div>`;
+  }
+
+  // ---------- RECEIVE ----------
+  function rcvLine(pid) {
+    let l = rcv.lines.find((x) => x.pid === pid);
+    if (!l) { l = { pid, expected: 0, qty: 0, serials: [] }; rcv.lines.unshift(l); }
+    return l;
+  }
+  const rcvCount = (l) => { const p = prod(l.pid); return p && p.serialized ? l.serials.length : num(l.qty); };
+  function onReceiveScan(raw) {
+    let r = parseScan(raw);
+    if (!r.pid && rcv.active && prod(rcv.active) && prod(rcv.active).serialized) r = { pid: rcv.active, serial: r.raw, raw: r.raw };
+    if (!r.pid) {
+      feedback("rcv", "err", `“${esc(r.raw)}” doesn't match any product code. Scan the product's barcode first, then its serial numbers.`,
+        S.canWrite ? { label: "Add as new product", fn: () => openProduct(null, /^\d{8,14}$/.test(r.raw) ? { barcode: r.raw } : { code: r.raw }) } : null);
+      return;
+    }
+    const p = prod(r.pid), l = rcvLine(r.pid);
+    if (r.serial && p.serialized) {
+      const k = K(r.serial);
+      const dup = rcv.lines.find((x) => x.serials.some((s) => K(s) === k));
+      if (dup) { feedback("rcv", "warn", `Serial <b>${esc(r.serial)}</b> was already scanned in this delivery.`); return; }
+      const e = serialIdx.get(k);
+      if (e && e.st === "in") { feedback("rcv", "warn", `Serial <b>${esc(r.serial)}</b> is already in stock (${esc(e.ref)}). Check the label.`); return; }
+      l.serials.push(r.serial.trim()); rcv.active = r.pid;
+      feedback("rcv", "ok", `<b>${esc(p.name)}</b> · serial ${esc(r.serial)} · ${l.serials.length}${l.expected ? " of " + l.expected : ""} scanned`);
+    } else if (p.serialized) {
+      rcv.active = r.pid;
+      feedback("rcv", "info", `<b>${esc(p.name)}</b> selected. Now scan the serial number on each unit.`);
+    } else {
+      l.qty = num(l.qty) + 1; rcv.active = null;
+      feedback("rcv", "ok", `<b>${esc(p.name)}</b> +1 · ${l.qty}${l.expected ? " of " + l.expected : ""} counted`);
+    }
+    saveRcv(); renderReceive();
+  }
+  function lineStatus(expected, got) {
+    if (!expected) return got ? `<span class="pill neutral">${got} counted</span>` : `<span class="pill neutral">Not scanned yet</span>`;
+    if (got === expected) return `<span class="pill ok">✓ Matches challan</span>`;
+    if (got < expected) return `<span class="pill warn">${expected - got} short</span>`;
+    return `<span class="pill err">${got - expected} extra</span>`;
+  }
+  function renderReceive() {
+    activeHint("rcv", rcv.active, () => { rcv.active = null; saveRcv(); renderReceive(); $("rcv-scan").focus(); });
+    const lines = rcv.lines.filter((l) => prod(l.pid));
+    paint($("rcvLines"), lines.length ? lines.map((l) => {
+      const p = prod(l.pid), got = rcvCount(l);
+      return `<div class="line ${rcv.active === l.pid ? "is-active" : ""}" data-pid="${esc(l.pid)}">
+        <div class="line-top"><div class="grow"><div class="p-name">${esc(p.name)}</div><div class="p-meta"><code>${esc(p.code)}</code>${p.serialized ? " · scan each serial number" : ""}</div></div>${lineStatus(num(l.expected), got)}<button type="button" class="icon-btn" data-rm-line aria-label="Remove ${esc(p.name)}">×</button></div>
+        <div class="line-nums">
+          <label class="mini">As per challan<input type="number" min="0" step="1" value="${num(l.expected) || ""}" placeholder="—" data-exp></label>
+          ${p.serialized ? `<div class="mini">Scanned<span class="val">${got}</span></div>${rcv.active !== l.pid ? `<button type="button" class="btn" data-activate style="padding:6px 12px">Scan serials</button>` : ""}`
+            : `<div class="mini">Received<span class="stepper"><button type="button" data-step="-1" aria-label="One less">−</button><input type="number" min="0" step="1" value="${got}" data-qty aria-label="Received quantity"><button type="button" data-step="1" aria-label="One more">+</button></span></div>`}
+        </div>
+        ${l.serials.length ? `<div class="serials">${l.serials.map((s, i) => `<span class="sn">${esc(s)}<button type="button" data-rm-sn="${i}" aria-label="Remove serial ${esc(s)}">×</button></span>`).join("")}</div>` : ""}
+      </div>`;
+    }).join("") : `<div class="empty" style="padding:24px"><h3>Nothing scanned yet</h3><p>Scan the first product, or add products from the challan above to check the delivery against it.</p></div>`);
+    // summary
+    let exp = 0, got = 0, issues = 0, sns = 0;
+    lines.forEach((l) => { const g = rcvCount(l); got += g; exp += num(l.expected); sns += l.serials.length; if (num(l.expected) && num(l.expected) !== g) issues++; });
+    $("rcvSummary").innerHTML = `<h3>Summary</h3><div class="totals" style="margin-top:10px">
+      <div class="tr"><span>Products</span><span>${lines.length}</span></div>
+      <div class="tr"><span>Units as per challan</span><span>${exp || "—"}</span></div>
+      <div class="tr"><span>Units received</span><span>${got}</span></div>
+      <div class="tr"><span>Serial numbers</span><span>${sns}</span></div></div>
+      ${issues ? `<p class="pill warn" style="margin-top:10px">${issues} product${issues > 1 ? "s don't" : " doesn't"} match the challan</p>` : exp && got ? `<p class="pill ok" style="margin-top:10px">Everything matches the challan</p>` : ""}`;
+    rcvConfirmArmed = false; $("rcvConfirm").textContent = "Add to stock";
+  }
+  $("rcvLines").addEventListener("click", (e) => {
+    const line = e.target.closest(".line"); if (!line) return;
+    const l = rcv.lines.find((x) => x.pid === line.dataset.pid); if (!l) return;
+    if (e.target.closest("[data-rm-line]")) { rcv.lines = rcv.lines.filter((x) => x !== l); if (rcv.active === l.pid) rcv.active = null; }
+    else if (e.target.closest("[data-rm-sn]")) l.serials.splice(+e.target.closest("[data-rm-sn]").dataset.rmSn, 1);
+    else if (e.target.closest("[data-step]")) l.qty = Math.max(0, num(l.qty) + +e.target.closest("[data-step]").dataset.step);
+    else if (e.target.closest("[data-activate]")) { rcv.active = l.pid; saveRcv(); renderReceive(); $("rcv-scan").focus(); return; }
+    else return;
+    saveRcv(); renderReceive();
+  });
+  $("rcvLines").addEventListener("change", (e) => {
+    const line = e.target.closest(".line"); if (!line) return;
+    const l = rcv.lines.find((x) => x.pid === line.dataset.pid); if (!l) return;
+    if (e.target.matches("[data-exp]")) l.expected = Math.max(0, Math.round(num(e.target.value)));
+    if (e.target.matches("[data-qty]")) l.qty = Math.max(0, Math.round(num(e.target.value)));
+    saveRcv(); setTimeout(renderReceive, 0);
+  });
+  ["supplier", "ref", "billAmount", "date", "notes"].forEach((k) => $("rcv-" + k).addEventListener("input", (e) => { rcv[k] = e.target.value; saveRcv(); }));
+  function fillRcvForm() { ["supplier", "ref", "billAmount", "date", "notes"].forEach((k) => ($("rcv-" + k).value = rcv[k] || "")); if (typeof supHint === "function") supHint(); }
+  const addRcvPick = () => { const pid = pickProduct("rcvPick"); if (!pid) return; rcvLine(pid); if (prod(pid).serialized) rcv.active = pid; saveRcv(); renderReceive(); };
+  $("rcvPickBtn").onclick = addRcvPick;
+  $("rcvPick").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addRcvPick(); } });
+  let rcvConfirmArmed = false;
+  $("rcvClear").onclick = () => { rcv = freshRcv(); saveRcv(); fillRcvForm(); renderReceive(); $("rcv-fb").hidden = true; };
+  $("rcvConfirm").onclick = async () => {
+    if (!S.db) return;
+    const lines = rcv.lines.filter((l) => prod(l.pid) && (rcvCount(l) > 0));
+    if (!lines.length) { toast("Scan or count at least one item first."); return; }
+    const issues = rcv.lines.filter((l) => prod(l.pid) && num(l.expected) && num(l.expected) !== rcvCount(l));
+    if (issues.length && !rcvConfirmArmed) { rcvConfirmArmed = true; $("rcvConfirm").textContent = "Add anyway, with differences"; toast("Some items don't match the challan. Check them, or tap again to add as received."); return; }
+    const seq = 1 + S.receipts.reduce((m, r) => Math.max(m, num(r.seq)), 0);
+    const doc = {
+      no: "GRN-" + String(seq).padStart(4, "0"), seq, supplier: rcv.supplier.trim(), ref: rcv.ref.trim(), date: rcv.date || today(), notes: rcv.notes.trim(), createdAt: new Date().toISOString(),
+      lines: rcv.lines.filter((l) => prod(l.pid) && (rcvCount(l) > 0 || num(l.expected))).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, unit: p.unit || "pcs", expected: num(l.expected), qty: rcvCount(l), serials: p.serialized ? l.serials.slice() : [] }; }),
+    };
+    $("rcvConfirm").disabled = true;
+    try {
+      doc.billAmount = Math.max(0, r2(num(rcv.billAmount)));
+      if (doc.supplier) { doc.partyId = await ensureParty("supplier", rcv.partyId, { name: doc.supplier }); }
+      const ref = await col("receipts").add(doc);
+      doc.id = ref.id;
+      rcv = freshRcv(); saveRcv(); fillRcvForm(); $("rcv-fb").hidden = true; renderReceive();
+      toast(`${doc.no} saved · ${doc.lines.reduce((a, l) => a + l.qty, 0)} units added to stock`);
+      showReceipt(doc);
+    } catch (e) { writeFailed(e); }
+    finally { $("rcvConfirm").disabled = false; }
+  };
+
+  // ---------- SELL ----------
+  function sellLine(pid) {
+    let l = sell.lines.find((x) => x.pid === pid);
+    if (!l) { const p = prod(pid); l = { pid, ordered: 0, qty: 0, serials: [], rate: num(p.price) }; sell.lines.unshift(l); }
+    return l;
+  }
+  const sellCount = (l) => { const p = prod(l.pid); return p && p.serialized ? l.serials.length : num(l.qty); };
+  function onSellScan(raw) {
+    let r = parseScan(raw);
+    if (!r.pid) { const e = serialIdx.get(K(r.raw)); if (e) r = { pid: e.pid, serial: e.sn, raw: r.raw }; }
+    if (!r.pid && sell.active && prod(sell.active) && prod(sell.active).serialized) r = { pid: sell.active, serial: r.raw, raw: r.raw };
+    if (!r.pid) { feedback("sell", "err", `“${esc(r.raw)}” doesn't match any product or serial number in stock.`); return; }
+    const p = prod(r.pid);
+    if (!p) { feedback("sell", "err", "That product has been deleted from the catalogue."); return; }
+    if (p.serialized && r.serial) {
+      const k = K(r.serial);
+      if (sell.lines.some((x) => x.serials.some((s) => K(s) === k))) { feedback("sell", "warn", `Serial <b>${esc(r.serial)}</b> is already loaded on this order.`); return; }
+      const e = serialIdx.get(k);
+      if (e && e.st === "sold") { feedback("sell", "err", `Serial <b>${esc(r.serial)}</b> was already sold on ${esc(e.ref)}. Don't load this unit.`); return; }
+      if (e && e.st === "removed") { feedback("sell", "err", `Serial <b>${esc(r.serial)}</b> was taken out of stock (${esc(e.ref)}).`); return; }
+      if (e && e.pid !== r.pid) { const op = prod(e.pid); feedback("sell", "err", `Serial <b>${esc(r.serial)}</b> belongs to ${esc(op ? op.name : "another product")}, not ${esc(p.name)}.`); return; }
+      const l = sellLine(r.pid);
+      if (!e) {
+        const unassigned = qtyOf(r.pid) - (inSerials.get(r.pid) || []).length - l.serials.filter((s) => !serialIdx.has(K(s))).length;
+        if (unassigned <= 0) { feedback("sell", "err", `Serial <b>${esc(r.serial)}</b> was never received into stock. Receive it first, or check you scanned the right label.`); return; }
+      }
+      l.serials.push(e ? e.sn : r.serial.trim()); sell.active = r.pid;
+      const n = l.serials.length;
+      if (l.ordered && n > l.ordered) feedback("sell", "warn", `<b>${esc(p.name)}</b> · ${esc(r.serial)} loaded. That's ${n} against ${l.ordered} ordered.`);
+      else feedback("sell", "ok", `<b>${esc(p.name)}</b> · serial ${esc(r.serial)} · ${n}${l.ordered ? " of " + l.ordered : ""} loaded`);
+    } else if (p.serialized) {
+      sellLine(r.pid); sell.active = r.pid;
+      feedback("sell", "info", `<b>${esc(p.name)}</b> selected. Now scan the serial number of each unit you load.`);
+    } else {
+      const l = sellLine(r.pid);
+      if (num(l.qty) + 1 > qtyOf(r.pid)) { feedback("sell", "err", `Only ${Math.max(0, qtyOf(r.pid))} ${esc(p.unit || "pcs")} of ${esc(p.name)} in stock.`); return; }
+      l.qty = num(l.qty) + 1; sell.active = null;
+      feedback("sell", "ok", `<b>${esc(p.name)}</b> +1 · ${l.qty}${l.ordered ? " of " + l.ordered : ""} loaded`);
+    }
+    saveSell(); renderSell();
+  }
+  const bizState = () => S.settings.state || "";
+  const isIntra = () => !sell.customer.state || !bizState() || sell.customer.state === bizState();
+  function calc(lines, incl, intra) {
+    let taxable = 0, tax = 0;
+    const out = lines.map((l) => {
+      const g = num(l.gst), gross = num(l.qty) * num(l.rate);
+      const t = r2(incl ? gross / (1 + g / 100) : gross), tx = r2(t * g / 100);
+      taxable += t; tax += tx;
+      return Object.assign({}, l, { taxable: t, tax: tx, amount: r2(t + tx) });
+    });
+    taxable = r2(taxable); tax = r2(tax);
+    const sub = r2(taxable + tax), total = Math.round(sub);
+    return { lines: out, totals: { taxable, cgst: intra ? r2(tax / 2) : 0, sgst: intra ? r2(tax - r2(tax / 2)) : 0, igst: intra ? 0 : tax, tax, roundOff: r2(total - sub), total } };
+  }
+  function draftInvoiceLines() {
+    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", uqc: p.uqc || uqcFor(p.unit), qty: sellCount(l), rate: num(l.rate), gst: num(p.gst ?? defGst()), serials: p.serialized ? l.serials.slice() : [] }; });
+  }
+  function renderSell() {
+    activeHint("sell", sell.active, () => { sell.active = null; saveSell(); renderSell(); $("sell-scan").focus(); });
+    const lines = sell.lines.filter((l) => prod(l.pid));
+    paint($("sellLines"), lines.length ? lines.map((l) => {
+      const p = prod(l.pid), got = sellCount(l), ord = num(l.ordered);
+      const status = !ord ? (got ? `<span class="pill neutral">${got} loaded</span>` : `<span class="pill neutral">Not loaded yet</span>`) : got === ord ? `<span class="pill ok">✓ All ${ord} loaded</span>` : got < ord ? `<span class="pill warn">${got} of ${ord} loaded</span>` : `<span class="pill err">${got - ord} over order</span>`;
+      return `<div class="line ${sell.active === l.pid ? "is-active" : ""}" data-pid="${esc(l.pid)}">
+        <div class="line-top"><div class="grow"><div class="p-name">${esc(p.name)}</div><div class="p-meta"><code>${esc(p.code)}</code> · ${f0.format(Math.max(0, qtyOf(p.id)))} in stock · GST ${num(p.gst ?? defGst())}%</div></div>${status}<button type="button" class="icon-btn" data-rm-line aria-label="Remove ${esc(p.name)}">×</button></div>
+        <div class="line-nums">
+          <label class="mini">Ordered<input type="number" min="0" step="1" value="${ord || ""}" placeholder="—" data-ord></label>
+          ${p.serialized ? `<div class="mini">Loaded<span class="val">${got}</span></div>` : `<div class="mini">Loaded<span class="stepper"><button type="button" data-step="-1" aria-label="One less">−</button><input type="number" min="0" step="1" value="${got}" data-qty aria-label="Loaded quantity"><button type="button" data-step="1" aria-label="One more">+</button></span></div>`}
+          <label class="mini">Rate (₹)<input class="rate" type="number" min="0" step="0.01" value="${num(l.rate)}" data-rate></label>
+          <div class="mini">Amount<span class="val" data-amt>${rs2(got * num(l.rate))}</span></div>
+          ${p.serialized && sell.active !== l.pid ? `<button type="button" class="btn" data-activate style="padding:6px 12px">Scan serials</button>` : ""}
+        </div>
+        ${l.serials.length ? `<div class="serials">${l.serials.map((s, i) => `<span class="sn">${esc(s)}<button type="button" data-rm-sn="${i}" aria-label="Remove serial ${esc(s)}">×</button></span>`).join("")}</div>` : ""}
+      </div>`;
+    }).join("") : `<div class="empty" style="padding:24px"><h3>Nothing loaded yet</h3><p>Scan the first product as it goes on the vehicle.</p></div>`);
+    renderSellTotals();
+  }
+  let sellArmed = false;
+  function renderSellTotals() {
+    const intra = isIntra(), incl = !!S.settings.pricesIncludeGst;
+    const c = calc(draftInvoiceLines(), incl, intra), t = c.totals;
+    const short = sell.lines.filter((l) => prod(l.pid) && num(l.ordered) && sellCount(l) < num(l.ordered));
+    const noRate = c.lines.filter((l) => !l.rate);
+    $("sellTotals").innerHTML = `
+      <div class="totals">
+        <div class="tr"><span>Items</span><span>${c.lines.length} · ${c.lines.reduce((a, l) => a + l.qty, 0)} units</span></div>
+        <div class="tr"><span>Taxable value</span><span>${rs2(t.taxable)}</span></div>
+        ${intra ? `<div class="tr"><span>CGST</span><span>${rs2(t.cgst)}</span></div><div class="tr"><span>SGST</span><span>${rs2(t.sgst)}</span></div>` : `<div class="tr"><span>IGST</span><span>${rs2(t.igst)}</span></div>`}
+        ${t.roundOff ? `<div class="tr"><span>Round off</span><span>${t.roundOff > 0 ? "+" : ""}${f2.format(t.roundOff)}</span></div>` : ""}
+        <div class="tr grand"><span>Total</span><span>${rs(t.total)}</span></div>
+        ${t.total ? `<div class="words">${esc(inWords(t.total))}</div>` : ""}
+      </div>
+      <div class="warnlist">
+        ${!sell.customer.name.trim() ? `<span class="pill neutral">Add the customer's name</span>` : ""}
+        ${short.map((l) => `<span class="pill warn">${esc(prod(l.pid).name)}: ${sellCount(l)} of ${num(l.ordered)} loaded</span>`).join("")}
+        ${noRate.map((l) => `<span class="pill warn">${esc(l.name)} has no rate</span>`).join("")}
+        ${!intra ? `<span class="pill info">Interstate sale: IGST applies</span>` : ""}
+        ${t.total > 50000 && !sell.customer.vehicle.trim() && !sell.customer.transId.trim() ? `<span class="pill warn">Over ₹50,000: add the vehicle number for the e-way bill</span>` : ""}
+        ${sell.customer.gstin.trim() && !GSTIN_RE.test(K(sell.customer.gstin)) ? `<span class="pill warn">Customer GSTIN should be 15 characters</span>` : ""}
+        ${GSTIN_RE.test(K(sell.customer.gstin)) && !/^\d{6}$/.test(sell.customer.pin.trim()) ? `<span class="pill warn">Add the customer's PIN code for the e-invoice</span>` : ""}
+      </div>`;
+    sellArmed = false; $("sellCreate").textContent = "Create invoice";
+  }
+  $("sellLines").addEventListener("click", (e) => {
+    const line = e.target.closest(".line"); if (!line) return;
+    const l = sell.lines.find((x) => x.pid === line.dataset.pid); if (!l) return;
+    if (e.target.closest("[data-rm-line]")) { sell.lines = sell.lines.filter((x) => x !== l); if (sell.active === l.pid) sell.active = null; }
+    else if (e.target.closest("[data-rm-sn]")) l.serials.splice(+e.target.closest("[data-rm-sn]").dataset.rmSn, 1);
+    else if (e.target.closest("[data-step]")) { const n = Math.max(0, num(l.qty) + +e.target.closest("[data-step]").dataset.step); if (n > qtyOf(l.pid)) { toast(`Only ${Math.max(0, qtyOf(l.pid))} in stock.`); return; } l.qty = n; }
+    else if (e.target.closest("[data-activate]")) { sell.active = l.pid; saveSell(); renderSell(); $("sell-scan").focus(); return; }
+    else return;
+    saveSell(); renderSell();
+  });
+  $("sellLines").addEventListener("input", (e) => {
+    const line = e.target.closest(".line"); if (!line) return;
+    const l = sell.lines.find((x) => x.pid === line.dataset.pid); if (!l) return;
+    if (e.target.matches("[data-rate]")) { l.rate = Math.max(0, num(e.target.value)); line.querySelector("[data-amt]").textContent = rs2(sellCount(l) * l.rate); saveSell(); renderSellTotals(); }
+  });
+  $("sellLines").addEventListener("change", (e) => {
+    const line = e.target.closest(".line"); if (!line) return;
+    const l = sell.lines.find((x) => x.pid === line.dataset.pid); if (!l) return;
+    if (e.target.matches("[data-ord]")) l.ordered = Math.max(0, Math.round(num(e.target.value)));
+    else if (e.target.matches("[data-qty]")) { l.qty = Math.min(Math.max(0, Math.round(num(e.target.value))), Math.max(0, qtyOf(l.pid))); }
+    else return;
+    saveSell(); setTimeout(renderSell, 0);
+  });
+  const CF = ["name", "phone", "gstin", "state", "address", "city", "pin", "so", "vehicle", "distance", "transName", "transId"];
+  CF.forEach((k) => $("c-" + k).addEventListener("input", (e) => {
+    sell.customer[k] = ["gstin", "vehicle", "transId"].includes(k) ? e.target.value.toUpperCase() : e.target.value;
+    if (k === "gstin" && !sell.customer.state) { const st = stateFromGstin(sell.customer.gstin); if (st) { sell.customer.state = st; $("c-state").value = st; } }
+    saveSell(); renderSellTotals();
+  }));
+  function fillSellForm() { CF.forEach((k) => ($("c-" + k).value = sell.customer[k] || "")); if (typeof custHint === "function") custHint(); }
+  const addSellPick = () => { const pid = pickProduct("sellPick"); if (!pid) return; sellLine(pid); saveSell(); renderSell(); };
+  $("sellPickBtn").onclick = addSellPick;
+  $("sellPick").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addSellPick(); } });
+  $("sellClear").onclick = () => { sell = freshSell(); saveSell(); fillSellForm(); renderSell(); $("sell-fb").hidden = true; };
+  function fyOf(dateStr) { const d = new Date(dateStr + "T00:00:00"); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return String(y).slice(2) + "-" + String(y + 1).slice(2); }
+  $("sellCreate").onclick = async () => {
+    if (!S.db) return;
+    const lines = draftInvoiceLines();
+    if (!sell.customer.name.trim()) { toast("Add the customer's name first."); $("c-name").focus(); return; }
+    if (!lines.length) { toast("Scan or add at least one item."); return; }
+    const short = sell.lines.some((l) => prod(l.pid) && num(l.ordered) && sellCount(l) !== num(l.ordered));
+    const noRate = lines.some((l) => !l.rate);
+    if ((short || noRate) && !sellArmed) { sellArmed = true; $("sellCreate").textContent = "Create anyway"; toast(noRate ? "Some items have no rate. Tap again to create the invoice anyway." : "What's loaded doesn't match the order. Tap again to invoice what's loaded."); return; }
+    const date = today(), fy = fyOf(date), prefix = (S.settings.prefix || "INV").trim() || "INV";
+    const seq = 1 + S.invoices.filter((i) => i.fy === fy && i.prefix === prefix).reduce((m, i) => Math.max(m, num(i.seq)), 0);
+    const intra = isIntra(), incl = !!S.settings.pricesIncludeGst;
+    const c = calc(lines, incl, intra);
+    const seller = {}; ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "bank", "terms"].forEach((k) => seller[k] = S.settings[k] || "");
+    const cu = sell.customer;
+    const transport = { vehicle: K(cu.vehicle).replace(/[^A-Z0-9]/g, ""), distance: Math.max(0, Math.round(num(cu.distance))), transName: (cu.transName || "").trim(), transId: K(cu.transId) };
+    const customer = { name: cu.name.trim(), phone: cu.phone || "", gstin: K(cu.gstin), state: cu.state || "", address: (cu.address || "").trim(), city: (cu.city || "").trim(), pin: (cu.pin || "").trim(), so: cu.so || "", vehicle: transport.vehicle };
+    const doc = { no: `${prefix}/${fy}/${String(seq).padStart(4, "0")}`, prefix, fy, seq, date, createdAt: new Date().toISOString(), customer, transport, seller, intra, pricesIncludeGst: incl, lines: c.lines, totals: c.totals };
+    if (doc.no.length > 16) { toast("The invoice prefix is too long for e-invoicing. Use up to 5 characters in Settings."); return; }
+    $("sellCreate").disabled = true;
+    try {
+      doc.partyId = await ensureParty("customer", sell.partyId, { name: customer.name, phone: customer.phone, gstin: customer.gstin, state: customer.state, address: customer.address, city: customer.city, pin: customer.pin });
+      const ref = await col("invoices").add(doc); doc.id = ref.id;
+      sell = freshSell(); saveSell(); fillSellForm(); $("sell-fb").hidden = true; renderSell();
+      toast(`Invoice ${doc.no} created`);
+      showInvoice(doc);
+    } catch (e) { writeFailed(e); }
+    finally { $("sellCreate").disabled = false; }
+  };
+
+  // ---------- Amount in words (Indian system) ----------
+  function inWords(amount) {
+    const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+    const two = (n) => n < 20 ? a[n] : b[Math.floor(n / 10)] + (n % 10 ? " " + a[n % 10] : "");
+    const three = (n) => (n >= 100 ? a[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " " : "") : "") + (n % 100 ? two(n % 100) : "");
+    function w(n) {
+      if (n === 0) return "Zero";
+      const parts = [], cr = Math.floor(n / 1e7), lk = Math.floor(n / 1e5) % 100, th = Math.floor(n / 1000) % 100, rest = n % 1000;
+      if (cr) parts.push(w(cr) + " Crore"); if (lk) parts.push(two(lk) + " Lakh"); if (th) parts.push(two(th) + " Thousand"); if (rest) parts.push(three(rest));
+      return parts.join(" ");
+    }
+    const rupees = Math.floor(Math.abs(amount)), paise = Math.round((Math.abs(amount) - rupees) * 100);
+    return "Rupees " + w(rupees) + (paise ? " and " + two(paise) + " Paise" : "") + " Only";
+  }
+
+  // ---------- E-invoice & e-way bill ----------
+  // Uses the IRP's own schema (v1.1) and response fields, so the portal upload used today and a
+  // direct connection added later share einvPayload() and applyIrpResult().
+  const STATE_CODES = { "Jammu & Kashmir": "01", "Himachal Pradesh": "02", "Punjab": "03", "Chandigarh": "04", "Uttarakhand": "05", "Haryana": "06", "Delhi": "07", "Rajasthan": "08", "Uttar Pradesh": "09", "Bihar": "10", "Sikkim": "11", "Arunachal Pradesh": "12", "Nagaland": "13", "Manipur": "14", "Mizoram": "15", "Tripura": "16", "Meghalaya": "17", "Assam": "18", "West Bengal": "19", "Jharkhand": "20", "Odisha": "21", "Chhattisgarh": "22", "Madhya Pradesh": "23", "Gujarat": "24", "Dadra & Nagar Haveli and Daman & Diu": "26", "Maharashtra": "27", "Karnataka": "29", "Goa": "30", "Lakshadweep": "31", "Kerala": "32", "Tamil Nadu": "33", "Puducherry": "34", "Andaman & Nicobar Islands": "35", "Telangana": "36", "Andhra Pradesh": "37", "Ladakh": "38" };
+  const stateCode = (name) => STATE_CODES[name] || "";
+  const stateFromGstin = (g) => { const c = String(g || "").slice(0, 2); return Object.keys(STATE_CODES).find((k) => STATE_CODES[k] === c) || ""; };
+  const UQC = [["NOS", "Numbers (NOS)"], ["PCS", "Pieces (PCS)"], ["SET", "Sets (SET)"], ["PRS", "Pairs (PRS)"], ["MTR", "Metres (MTR)"], ["KGS", "Kilograms (KGS)"], ["LTR", "Litres (LTR)"], ["BOX", "Boxes (BOX)"], ["ROL", "Rolls (ROL)"], ["OTH", "Others (OTH)"]];
+  function uqcFor(unit) {
+    const u = String(unit || "").toLowerCase().trim();
+    if (/^(pc|pcs|piece|pieces|nos|no|unit|units)?$/.test(u)) return "NOS";
+    if (/^(m|mtr|mtrs|meter|meters|metre|metres)$/.test(u)) return "MTR";
+    if (/^(kg|kgs|kilo)/.test(u)) return "KGS";
+    if (/^(set|sets|kit|kits)$/.test(u)) return "SET";
+    if (/^(pair|pairs|prs)$/.test(u)) return "PRS";
+    if (/^(l|ltr|ltrs|litre|litres|liter|liters)$/.test(u)) return "LTR";
+    if (/^box/.test(u)) return "BOX";
+    if (/^roll/.test(u)) return "ROL";
+    return "OTH";
+  }
+  const GSTIN_RE = /^\d{2}[A-Z0-9]{13}$/;
+  const HSN_RE = /^\d{6}(\d{2})?$/;
+  const dmy = (d) => { const [y, m, dd] = String(d).slice(0, 10).split("-"); return `${dd}/${m}/${y}`; };
+  const isB2B = (inv) => GSTIN_RE.test(K(inv.customer && inv.customer.gstin));
+  const ewbNeeded = (inv) => num(inv.totals && inv.totals.total) > 50000;
+  function sellerOf(inv) { const s = Object.assign({}, inv.seller || {}); Object.keys(S.settings).forEach((k) => { if (!s[k]) s[k] = S.settings[k]; }); return s; }
+  const transportOf = (inv) => Object.assign({ vehicle: (inv.customer && inv.customer.vehicle) || "", distance: 0, transName: "", transId: "" }, inv.transport || {});
+
+  function einvProblems(inv) {
+    const s = sellerOf(inv), c = inv.customer || {}, out = [];
+    if (!GSTIN_RE.test(K(s.gstin))) out.push("Add your 15-character GSTIN in Settings.");
+    if (!String(s.address || "").trim()) out.push("Add your address in Settings.");
+    if (String(s.city || "").trim().length < 3) out.push("Add your city in Settings.");
+    if (!/^\d{6}$/.test(String(s.pin || ""))) out.push("Add your 6-digit PIN code in Settings.");
+    if (!stateCode(s.state)) out.push("Choose your state in Settings.");
+    if (!isB2B(inv)) out.push("The customer has no valid GSTIN, so this is a B2C sale and doesn't need an e-invoice.");
+    if (!String(c.address || "").trim()) out.push("Add the customer's address below.");
+    if (String(c.city || "").trim().length < 3) out.push("Add the customer's city below.");
+    if (!/^\d{6}$/.test(String(c.pin || ""))) out.push("Add the customer's 6-digit PIN code below.");
+    if (!stateCode(c.state || stateFromGstin(c.gstin))) out.push("The customer's state is missing.");
+    if (!/^[A-Za-z1-9][A-Za-z0-9\/-]{0,15}$/.test(inv.no || "")) out.push("The invoice number doesn't fit the e-invoice format (16 characters, letters, digits, / and -).");
+    const noHsn = (inv.lines || []).filter((l) => !HSN_RE.test(String(l.hsn || "")));
+    if (noHsn.length) out.push(`Add a 6 or 8 digit HSN code to: ${noHsn.map((l) => l.name).join(", ")}. Edit the product in Stock, then tap “Refresh HSN and units from catalogue” below.`);
+    return out;
+  }
+  function einvPayload(inv) {
+    const s = sellerOf(inv), c = inv.customer || {}, tr = transportOf(inv), intra = !!inv.intra;
+    const clean = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
+    const phone = (v) => { const d = String(v || "").replace(/\D/g, "").slice(-12); return d.length >= 6 ? d : undefined; };
+    const buyerSt = stateCode(c.state || stateFromGstin(c.gstin));
+    let ass = 0, cg = 0, sg = 0, ig = 0;
+    const items = (inv.lines || []).map((l, i) => {
+      const qty = num(l.qty), a = r2(num(l.taxable)), tax = r2(num(l.tax));
+      const lc = intra ? r2(tax / 2) : 0, ls = intra ? r2(tax - lc) : 0, li = intra ? 0 : tax;
+      ass += a; cg += lc; sg += ls; ig += li;
+      return { SlNo: String(i + 1), PrdDesc: clean(l.name + (l.rating && !String(l.name).includes(l.rating) ? " " + l.rating : ""), 300), IsServc: "N", HsnCd: String(l.hsn || ""), Qty: qty, Unit: l.uqc || uqcFor(l.unit), UnitPrice: qty ? Math.round((a / qty) * 1000) / 1000 : 0, TotAmt: a, Discount: 0, AssAmt: a, GstRt: num(l.gst), IgstAmt: li, CgstAmt: lc, SgstAmt: ls, CesRt: 0, CesAmt: 0, CesNonAdvlAmt: 0, StateCesRt: 0, StateCesAmt: 0, StateCesNonAdvlAmt: 0, OthChrg: 0, TotItemVal: r2(a + tax) };
+    });
+    ass = r2(ass); cg = r2(cg); sg = r2(sg); ig = r2(ig);
+    const total = num(inv.totals && inv.totals.total) || Math.round(ass + cg + sg + ig);
+    const p = {
+      Version: "1.1",
+      TranDtls: { TaxSch: "GST", SupTyp: "B2B", RegRev: "N", IgstOnIntra: "N" },
+      DocDtls: { Typ: "INV", No: inv.no, Dt: dmy(inv.date) },
+      SellerDtls: { Gstin: K(s.gstin), LglNm: clean(s.name, 100), Addr1: clean(s.address, 100), Loc: clean(s.city, 50), Pin: num(s.pin), Stcd: stateCode(s.state), Ph: phone(s.phone), Em: s.email ? clean(s.email, 100) : undefined },
+      BuyerDtls: { Gstin: K(c.gstin), LglNm: clean(c.name, 100), Pos: buyerSt, Addr1: clean(c.address, 100), Loc: clean(c.city, 50), Pin: num(c.pin), Stcd: buyerSt, Ph: phone(c.phone) },
+      ItemList: items,
+      ValDtls: { AssVal: ass, CgstVal: cg, SgstVal: sg, IgstVal: ig, CesVal: 0, StCesVal: 0, Discount: 0, OthChrg: 0, RndOffAmt: r2(total - (ass + cg + sg + ig)), TotInvVal: total },
+    };
+    if (tr.vehicle || tr.transId) p.EwbDtls = { TransId: tr.transId || undefined, TransName: tr.transName ? clean(tr.transName, 100) : undefined, Distance: Math.round(num(tr.distance)), TransMode: tr.vehicle ? "1" : undefined, VehNo: tr.vehicle || undefined, VehType: tr.vehicle ? "R" : undefined };
+    return p;
+  }
+  // Pull the IRP's result fields out of any row shape: the API response, the portal's JSON or its Excel/CSV download.
+  const RES_KEYS = { irn: ["irn"], ackNo: ["ackno", "acknumber", "acknowledgementno", "acknowledgementnumber"], ackDt: ["ackdt", "ackdate", "acknowledgementdate"], qr: ["signedqrcode", "signedqr", "qrcode", "qrcodedata"], ewbNo: ["ewbno", "ewaybillno", "ewbnumber", "ewaybillnumber"], ewbDt: ["ewbdt", "ewbdate", "ewaybilldate"], ewbValid: ["ewbvalidtill", "validtill", "validupto", "ewbvalidupto", "ewbvaliduntil"], docNo: ["docno", "documentno", "invoiceno", "docnumber", "documentnumber", "invno"] };
+  function readResult(row) {
+    const out = {}, keys = Object.keys(row || {});
+    for (const [f, al] of Object.entries(RES_KEYS)) { const k = keys.find((x) => al.includes(normH(x))); if (k != null && String(row[k]).trim() && String(row[k]) !== "null") out[f] = String(row[k]).trim(); }
+    if (!out.docNo && row && row.DocDtls && row.DocDtls.No) out.docNo = String(row.DocDtls.No);
+    return out;
+  }
+  function collectRows(x, acc) {
+    if (Array.isArray(x)) x.forEach((y) => collectRows(y, acc));
+    else if (x && typeof x === "object") {
+      const r = readResult(x);
+      if (r.irn || r.ewbNo) acc.push(r); else Object.values(x).forEach((y) => { if (y && typeof y === "object") collectRows(y, acc); else if (typeof y === "string" && /^\s*[\[{]/.test(y)) { try { collectRows(JSON.parse(y), acc); } catch (e) {} } });
+    }
+    return acc;
+  }
+  async function parseResultFile(f) {
+    if (/\.json$/i.test(f.name) || f.type === "application/json") return collectRows(JSON.parse(await f.text()), []);
+    await lib("xlsx");
+    const wb = window.XLSX.read(await f.arrayBuffer(), { type: "array" }), acc = [];
+    wb.SheetNames.forEach((n) => {
+      const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: "", raw: false });
+      const h = rows.findIndex((r) => r.some((c) => RES_KEYS.irn.includes(normH(c)) || RES_KEYS.ewbNo.includes(normH(c))));
+      if (h < 0) return;
+      rows.slice(h + 1).forEach((r) => { const o = {}; rows[h].forEach((k, i) => (o[k] = r[i])); const x = readResult(o); if (x.irn || x.ewbNo) acc.push(x); });
+    });
+    return acc;
+  }
+  async function applyIrpResult(inv, r, source) {
+    const cur = inv.einv || {}, e = Object.assign({}, cur);
+    ["irn", "ackNo", "ackDt", "qr", "ewbNo", "ewbDt", "ewbValid"].forEach((k) => { if (r[k]) e[k] = r[k]; });
+    e.source = source; e.updatedAt = new Date().toISOString();
+    await col("invoices").doc(inv.id).update({ einv: e });
+    inv.einv = e;
+  }
+  async function importResults(f, only) {
+    let rows;
+    try { rows = await parseResultFile(f); } catch (e) { toast("Couldn't read that file. Use the JSON or Excel file the portal gave you."); return; }
+    if (!rows.length) { toast("No IRN or e-way bill numbers found in that file."); return; }
+    let done = 0, unmatched = 0;
+    for (const r of rows) {
+      let inv = r.docNo ? S.invoices.find((i) => K(i.no) === K(r.docNo)) : null;
+      if (!inv && only && rows.length === 1) inv = only;
+      if (!inv || (only && inv.id !== only.id && rows.length === 1)) { unmatched++; continue; }
+      try { await applyIrpResult(inv, r, "portal-file"); done++; } catch (e) { writeFailed(e); return; }
+    }
+    toast(`${done} invoice${done === 1 ? "" : "s"} updated${unmatched ? `, ${unmatched} row${unmatched === 1 ? "" : "s"} didn't match an invoice number` : ""}`);
+    if (only) { const fresh = S.invoices.find((i) => i.id === only.id) || only; showInvoice(fresh); }
+  }
+  function pickFile(accept, fn) { const i = document.createElement("input"); i.type = "file"; i.accept = accept; i.onchange = () => i.files[0] && fn(i.files[0]); i.click(); }
+  const einvFileName = (list) => list.length === 1 ? `e-invoice-${list[0].no.replace(/[\/\\]/g, "-")}.json` : `e-invoices-${today()}.json`;
+  async function downloadEinv(list) { await saveFile(einvFileName(list), JSON.stringify(list.map(einvPayload), null, 2)); }
+
+  async function qrDataUrl(text) {
+    await lib("qr");
+    const q = window.qrcode(0, "L"); q.addData(text); q.make();
+    const n = q.getModuleCount(), sc = 4, m = 4, cv = document.createElement("canvas");
+    cv.width = cv.height = (n + 2 * m) * sc;
+    const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = "#000";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + m) * sc, (r + m) * sc, sc, sc);
+    return cv.toDataURL("image/png");
+  }
+
+  // ---------- Invoice view + PDF ----------
+  function invoiceHtml(inv) {
+    const s = sellerOf(inv), c = inv.customer || {}, t = inv.totals || {}, e = inv.einv || {};
+    return `<div class="paper-wrap"><div class="paper" style="min-width:560px">
+      <div class="top">
+        <div><h4>${esc(s.name || "Your business name")}</h4><div class="muted" style="white-space:pre-line">${esc([s.address, [s.city, s.pin].filter(Boolean).join(" - ")].filter(Boolean).join("\n"))}</div>
+          <div class="muted">${s.gstin ? "GSTIN " + esc(s.gstin) : ""}${s.state ? " · " + esc(s.state) : ""}${s.phone ? " · " + esc(s.phone) : ""}</div></div>
+        <div style="text-align:right"><div class="title">Tax invoice</div><div style="font:600 15px var(--mono)">${esc(inv.no)}</div><div class="muted">${fdate(inv.date)}</div>${c.so ? `<div class="muted">Order ${esc(c.so)}</div>` : ""}${transportOf(inv).vehicle ? `<div class="muted">Vehicle ${esc(transportOf(inv).vehicle)}</div>` : ""}${e.ewbNo ? `<div class="muted">E-way bill ${esc(e.ewbNo)}</div>` : ""}</div>
+      </div>
+      ${e.irn ? `<div style="display:flex;gap:14px;align-items:center;border:1px solid var(--paper-line);border-radius:8px;padding:10px"><img id="irnQr" alt="Signed e-invoice QR code" style="width:96px;height:96px;flex:none;background:#fff"><div style="min-width:0;font-size:12px"><div><b>IRN</b> <span style="font-family:var(--mono);word-break:break-all">${esc(e.irn)}</span></div><div class="muted">Ack no. ${esc(e.ackNo || "—")} · Ack date ${esc(e.ackDt || "—")}</div></div></div>` : ""}
+      <div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Bill to</div><b>${esc(c.name)}</b><div class="muted" style="white-space:pre-line">${esc([c.address, [c.city, c.pin].filter(Boolean).join(" - ")].filter(Boolean).join("\n"))}</div>
+        <div class="muted">${c.gstin ? "GSTIN " + esc(c.gstin) + " · " : ""}${c.phone ? esc(c.phone) + " · " : ""}Place of supply: ${esc(c.state || s.state || "—")}</div></div>
+      <table><thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Amount</th></tr></thead>
+      <tbody>${(inv.lines || []).map((l, i) => `<tr><td>${i + 1}</td><td><b>${esc(l.name)}</b><div class="muted">${esc(l.code)}${l.rating ? " · " + esc(l.rating) : ""}</div>${l.serials && l.serials.length ? `<div class="sns">S/N: ${l.serials.map(esc).join(", ")}</div>` : ""}</td><td>${esc(l.hsn || "")}</td><td class="num">${l.qty} ${esc(l.unit || "")}</td><td class="num">${f2.format(l.rate)}</td><td class="num">${f2.format(l.taxable)}</td><td class="num">${l.gst}%<div class="muted">${f2.format(l.tax)}</div></td><td class="num">${f2.format(l.amount)}</td></tr>`).join("")}</tbody></table>
+      <div class="sum">
+        <div><span class="muted">Taxable value</span><span>${rs2(t.taxable || 0)}</span></div>
+        ${inv.intra ? `<div><span class="muted">CGST</span><span>${rs2(t.cgst || 0)}</span></div><div><span class="muted">SGST</span><span>${rs2(t.sgst || 0)}</span></div>` : `<div><span class="muted">IGST</span><span>${rs2(t.igst || 0)}</span></div>`}
+        ${t.roundOff ? `<div><span class="muted">Round off</span><span>${f2.format(t.roundOff)}</span></div>` : ""}
+        <div class="g"><span>Total</span><span>${rs(t.total || 0)}</span></div>
+      </div>
+      <div class="muted">${esc(inWords(t.total || 0))}</div>
+      ${s.bank ? `<div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Payment details</div><div style="white-space:pre-line">${esc(s.bank)}</div></div>` : ""}
+      ${s.terms ? `<div class="muted" style="white-space:pre-line;font-size:12px">${esc(s.terms)}</div>` : ""}
+      <div style="text-align:right;margin-top:18px">For ${esc(s.name || "")}<br><br><span class="muted">Authorised signatory</span></div>
+    </div></div>`;
+  }
+  function einvPanel(inv) {
+    const e = inv.einv || {}, b2b = isB2B(inv), need = ewbNeeded(inv), tr = transportOf(inv), c = inv.customer || {};
+    const problems = b2b ? einvProblems(inv) : [];
+    const status = [
+      b2b ? (e.irn ? `<span class="pill ok">✓ E-invoice registered</span>` : `<span class="pill warn">E-invoice not registered yet</span>`) : `<span class="pill neutral">B2C sale: no e-invoice needed</span>`,
+      e.ewbNo ? `<span class="pill ok">✓ E-way bill ${esc(e.ewbNo)}</span>` : need ? `<span class="pill warn">E-way bill needed (over ₹50,000)</span>` : `<span class="pill neutral">E-way bill optional (₹50,000 or less)</span>`,
+    ].join(" ");
+    const editable = !e.irn && S.canWrite;
+    return `<div class="card" style="background:var(--surface-2);border:0">
+      <div class="card-head"><h3>E-invoice and e-way bill</h3><div class="row">${status}</div></div>
+      ${e.irn ? `<p class="small">Registered${e.source === "manual" ? " (entered by hand)" : ""}. IRN, acknowledgement and QR code print on the invoice${e.ewbNo ? ", and the e-way bill prints on page 2" : ""}.</p>` : ""}
+      ${b2b && !e.irn ? `
+        <ol class="small" style="margin:0;padding-left:20px;display:grid;gap:4px">
+          <li>Download the e-invoice file${tr.vehicle || tr.transId ? " (it includes the transport details, so the portal creates the e-way bill too)" : ""}.</li>
+          <li>On <b>einvoice1.gst.gov.in</b>, sign in and open <b>e-Invoice → Bulk upload</b>, then upload the file.</li>
+          <li>Download the result from the portal and import it here. The IRN, QR code and e-way bill number are filled in automatically.</li>
+        </ol>
+        ${problems.length ? `<div class="warnlist">${problems.map((x) => `<span class="pill warn" style="white-space:normal">${esc(x)}</span>`).join("")}</div>` : ""}` : ""}
+      ${!b2b && need && !e.ewbNo ? `<p class="small">Create the e-way bill on <b>ewaybillgst.gov.in</b> (e-Waybill → Generate new), then enter its number below so it prints with the invoice.</p>` : ""}
+      ${editable ? `<div class="section-t">Customer and transport</div>
+        <div class="fields three">
+          <label class="field">Customer city<input id="ei-city" value="${esc(c.city || "")}"></label>
+          <label class="field">Customer PIN<input id="ei-pin" maxlength="6" inputmode="numeric" value="${esc(c.pin || "")}"></label>
+          <label class="field">Customer GSTIN<input id="ei-gstin" style="text-transform:uppercase" value="${esc(c.gstin || "")}"></label>
+          <label class="field full">Customer address<input id="ei-address" value="${esc(c.address || "")}"></label>
+          <label class="field">Vehicle no.<input id="ei-vehicle" style="text-transform:uppercase" value="${esc(tr.vehicle || "")}"></label>
+          <label class="field">Distance (km)<input id="ei-distance" type="number" min="0" value="${esc(tr.distance || "")}" placeholder="0 = automatic"></label>
+          <label class="field">Transporter GSTIN / ID<input id="ei-transId" style="text-transform:uppercase" value="${esc(tr.transId || "")}"></label>
+          <label class="field full">Transporter name<input id="ei-transName" value="${esc(tr.transName || "")}"></label>
+        </div>
+        <div class="row"><button type="button" class="btn" id="eiSave">Save changes</button><button type="button" class="btn ghost" id="eiRefresh">Refresh HSN and units from catalogue</button></div>` : ""}
+      <div class="row">
+        ${b2b && !e.irn ? `<button type="button" class="btn primary" id="eiDownload" ${problems.length ? "disabled" : ""}>Download e-invoice file</button>` : ""}
+        ${S.canWrite ? `<button type="button" class="btn" id="eiImport">Import portal result</button>` : ""}
+        ${S.canWrite ? `<button type="button" class="btn ghost" id="eiManualBtn">Enter numbers by hand</button>` : ""}
+      </div>
+      <div id="eiManual" hidden style="display:grid;gap:12px">
+        <div class="fields">
+          ${b2b ? `<label class="field full">IRN<input id="em-irn" value="${esc(e.irn || "")}" placeholder="64-character IRN"></label>
+          <label class="field">Ack no.<input id="em-ackNo" value="${esc(e.ackNo || "")}"></label>
+          <label class="field">Ack date<input id="em-ackDt" value="${esc(e.ackDt || "")}" placeholder="2026-09-28 11:45:00"></label>
+          <label class="field full">Signed QR code <span class="hint">the long text the portal gives, not an image</span><textarea id="em-qr">${esc(e.qr || "")}</textarea></label>` : ""}
+          <label class="field">E-way bill no.<input id="em-ewbNo" value="${esc(e.ewbNo || "")}" inputmode="numeric" placeholder="12 digits"></label>
+          <label class="field">E-way bill date<input id="em-ewbDt" value="${esc(e.ewbDt || "")}" placeholder="28/09/2026 11:45"></label>
+          <label class="field">Valid until<input id="em-ewbValid" value="${esc(e.ewbValid || "")}" placeholder="29/09/2026 23:59"></label>
+        </div>
+        <div class="row"><button type="button" class="btn primary" id="emSave">Save numbers</button>${e.irn || e.ewbNo ? `<button type="button" class="btn danger" id="emClear">Remove these numbers</button>` : ""}</div>
+      </div>
+    </div>`;
+  }
+  function showInvoice(inv) {
+    $("vTitle").textContent = "Invoice " + inv.no;
+    $("vSub").textContent = `${inv.customer?.name || ""} · ${fdate(inv.date)} · ${rs(inv.totals?.total || 0)}`;
+    viewing = { kind: "invoice", id: inv.id };
+    const pst = invPay.get(inv.id), pid = invParty(inv);
+    const payStrip = `<div class="row" style="justify-content:space-between"><div class="row">${pst ? payPill(pst) : ""}${pst && pst.paid > 0.5 && pst.left > 0.5 ? `<span class="muted small">${rs(pst.paid)} received</span>` : ""}</div><div class="row">${pid ? `<button type="button" class="btn ghost" id="invParty">Customer statement</button>` : ""}${pid && S.canWrite && (!pst || pst.left > 0.5) ? `<button type="button" class="btn" id="invPay">Record payment</button>` : ""}</div></div>`;
+    $("vBody").innerHTML = payStrip + einvPanel(inv) + invoiceHtml(inv) + (!(sellerOf(inv).name) ? `<p class="pill warn">Add your business name and GSTIN in Settings so they print on invoices.</p>` : "");
+    const e = inv.einv || {};
+    $("vFoot").innerHTML = `<span class="muted small">${e.ewbNo ? "PDF includes the e-way bill on page 2" : `${(inv.lines || []).reduce((a, l) => a + (l.serials || []).length, 0)} serial numbers recorded`}</span><div class="row"><button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="vPdf">Download PDF</button></div>`;
+    $("vPdf").onclick = () => invoicePdf(inv);
+    if (e.qr) qrDataUrl(e.qr).then((u) => { const im = $("irnQr"); if (im) im.src = u; }).catch(() => {});
+    const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+    on("eiDownload", () => downloadEinv([inv]));
+    on("invPay", () => openPayment(pid, inv.id));
+    on("invParty", () => showParty(pid));
+    on("eiImport", () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, inv)));
+    on("eiManualBtn", () => { $("eiManual").hidden = !$("eiManual").hidden; });
+    on("eiSave", async () => {
+      const v = (id) => $(id).value.trim();
+      const customer = Object.assign({}, inv.customer, { city: v("ei-city"), pin: v("ei-pin"), gstin: K(v("ei-gstin")), address: v("ei-address") });
+      if (!customer.state) customer.state = stateFromGstin(customer.gstin);
+      const transport = { vehicle: K(v("ei-vehicle")).replace(/[^A-Z0-9]/g, ""), distance: Math.max(0, Math.round(num(v("ei-distance")))), transName: v("ei-transName"), transId: K(v("ei-transId")) };
+      customer.vehicle = transport.vehicle;
+      try { await col("invoices").doc(inv.id).update({ customer, transport }); inv.customer = customer; inv.transport = transport; toast("Saved"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    on("eiRefresh", async () => {
+      const lines = (inv.lines || []).map((l) => { const p = prod(l.pid); return p ? Object.assign({}, l, { hsn: p.hsn || l.hsn || "", uqc: p.uqc || uqcFor(p.unit) }) : l; });
+      try { await col("invoices").doc(inv.id).update({ lines }); inv.lines = lines; toast("HSN codes and units updated"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    on("emSave", async () => {
+      const r = {}; ["irn", "ackNo", "ackDt", "qr", "ewbNo", "ewbDt", "ewbValid"].forEach((k) => { const el = $("em-" + k); if (el && el.value.trim()) r[k] = el.value.trim(); });
+      if (r.irn && !/^[0-9a-f]{64}$/i.test(r.irn)) { toast("The IRN should be 64 characters (letters a–f and digits)."); return; }
+      if (r.ewbNo && !/^\d{12}$/.test(r.ewbNo)) { toast("The e-way bill number should be 12 digits."); return; }
+      try { await applyIrpResult(inv, r, "manual"); toast("Saved"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    on("emClear", async () => {
+      const b = $("emClear");
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Yes, remove them"; return; }
+      const rest = Object.assign({}, inv); delete rest.id; delete rest.einv;
+      try { await col("invoices").doc(inv.id).set(rest); delete inv.einv; toast("Numbers removed"); showInvoice(inv); } catch (x) { writeFailed(x); }
+    });
+    if (!$("vDlg").open) $("vDlg").showModal();
+  }
+  const pdfText = (s) => String(s ?? "").replace(/₹/g, "Rs.").replace(/[–—]/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[^\x09\x0a\x20-\x7e\xa0-\xff]/g, "");
+  async function invoicePdf(inv) {
+    const e = inv.einv || {};
+    try { await lib("pdf"); if (e.ewbNo) await lib("bar"); } catch (x) { toast(x.message); return; }
+    let qrImg = null;
+    if (e.qr) { try { qrImg = await qrDataUrl(e.qr); } catch (x) { toast("Couldn't draw the QR code. Check the signed QR text."); } }
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    const W = 210, M = 14, s = sellerOf(inv), c = inv.customer || {}, t = inv.totals || {}, tr = transportOf(inv);
+    const money = (n) => f2.format(n || 0);
+    let y = M + 2;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text(pdfText(s.name || "Your business name"), M, y + 4);
+    doc.setFontSize(11); doc.setTextColor(10, 116, 128); doc.text("TAX INVOICE", W - M, y + 4, { align: "right" }); doc.setTextColor(0);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    let ly = y + 10;
+    doc.splitTextToSize(pdfText([s.address, [s.city, s.pin].filter(Boolean).join(" - ")].filter(Boolean).join(", ")), 110).forEach((ln) => { doc.text(ln, M, ly); ly += 4.2; });
+    const sl = [s.gstin ? "GSTIN " + s.gstin : "", s.state, s.phone, s.email].filter(Boolean).join("  |  ");
+    if (sl) { doc.text(pdfText(sl), M, ly); ly += 4.2; }
+    let ry = y + 10;
+    [["Invoice no.", inv.no], ["Date", fdate(inv.date)], c.so ? ["Order", c.so] : null, tr.vehicle ? ["Vehicle", tr.vehicle] : null, e.ewbNo ? ["E-way bill", e.ewbNo] : null].filter(Boolean).forEach(([k, v]) => { doc.setTextColor(110); doc.text(k, W - M - 50, ry); doc.setTextColor(0); doc.text(pdfText(v), W - M, ry, { align: "right" }); ry += 4.6; });
+    y = Math.max(ly, ry) + 3;
+    if (e.irn) {
+      doc.setDrawColor(210); doc.roundedRect(M, y, W - 2 * M, 36, 2, 2);
+      if (qrImg) doc.addImage(qrImg, "PNG", W - M - 34, y + 2, 32, 32);
+      doc.setFontSize(8); doc.setTextColor(110); doc.text("E-INVOICE", M + 4, y + 6); doc.setTextColor(0);
+      doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.text("IRN", M + 4, y + 12); doc.setFont("courier", "normal"); doc.setFontSize(8);
+      doc.splitTextToSize(e.irn, W - 2 * M - 52).forEach((ln, i) => doc.text(ln, M + 12, y + 12 + i * 3.8));
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+      doc.text(pdfText(`Ack no. ${e.ackNo || "-"}     Ack date ${e.ackDt || "-"}`), M + 4, y + 26);
+      y += 42;
+    } else { doc.setDrawColor(200); doc.line(M, y, W - M, y); y += 6; }
+    doc.setFontSize(8); doc.setTextColor(110); doc.text("BILL TO", M, y); doc.setTextColor(0); y += 4.5;
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(pdfText(c.name), M, y); doc.setFont("helvetica", "normal"); doc.setFontSize(9); y += 4.5;
+    doc.splitTextToSize(pdfText([c.address, [c.city, c.pin].filter(Boolean).join(" - ")].filter(Boolean).join(", ")), 120).forEach((ln) => { doc.text(ln, M, y); y += 4.2; });
+    doc.text(pdfText([c.gstin ? "GSTIN " + c.gstin : "", c.phone, "Place of supply: " + (c.state || s.state || "-")].filter(Boolean).join("  |  ")), M, y); y += 7;
+    const cols = [{ h: "#", w: 8 }, { h: "Item", w: 66 }, { h: "HSN", w: 16 }, { h: "Qty", w: 14, r: 1 }, { h: "Rate", w: 22, r: 1 }, { h: "Taxable", w: 22, r: 1 }, { h: "GST", w: 14, r: 1 }, { h: "Amount", w: 20, r: 1 }];
+    const head = () => { doc.setFillColor(238, 243, 244); doc.rect(M, y - 4, W - 2 * M, 7, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); let x = M; cols.forEach((cl) => { doc.text(cl.h, cl.r ? x + cl.w - 1.5 : x + 1.5, y + 0.5, cl.r ? { align: "right" } : undefined); x += cl.w; }); doc.setFont("helvetica", "normal"); y += 6; };
+    head();
+    (inv.lines || []).forEach((l, i) => {
+      doc.setFontSize(9);
+      const nameL = doc.splitTextToSize(pdfText(l.name), cols[1].w - 3);
+      const subL = doc.splitTextToSize(pdfText([l.code, l.rating].filter(Boolean).join(" | ")), cols[1].w - 3);
+      doc.setFontSize(7.5);
+      const snL = l.serials && l.serials.length ? doc.splitTextToSize(pdfText("S/N: " + l.serials.join(", ")), cols[1].w - 3) : [];
+      const hgt = nameL.length * 4 + subL.length * 3.6 + snL.length * 3.3 + 3;
+      if (y + hgt > 272) { doc.addPage(); y = M + 6; head(); }
+      let x = M; const vals = [String(i + 1), null, pdfText(l.hsn || ""), `${l.qty} ${pdfText(l.unit || "")}`, money(l.rate), money(l.taxable), `${l.gst}%`, money(l.amount)];
+      doc.setFontSize(9);
+      cols.forEach((cl, j) => {
+        if (j === 1) {
+          let yy = y; doc.setFont("helvetica", "bold"); nameL.forEach((ln) => { doc.text(ln, x + 1.5, yy); yy += 4; }); doc.setFont("helvetica", "normal");
+          doc.setFontSize(8); doc.setTextColor(100); subL.forEach((ln) => { doc.text(ln, x + 1.5, yy); yy += 3.6; });
+          doc.setFontSize(7.5); snL.forEach((ln) => { doc.text(ln, x + 1.5, yy); yy += 3.3; }); doc.setTextColor(0); doc.setFontSize(9);
+        } else doc.text(vals[j], cl.r ? x + cl.w - 1.5 : x + 1.5, y, cl.r ? { align: "right" } : undefined);
+        x += cl.w;
+      });
+      y += hgt; doc.setDrawColor(225); doc.line(M, y - 3, W - M, y - 3);
+    });
+    if (y > 235) { doc.addPage(); y = M + 6; }
+    y += 2;
+    const tr2 = (k, v, bold) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(bold ? 11 : 9); doc.text(k, W - M - 62, y); doc.text(v, W - M, y, { align: "right" }); y += bold ? 6 : 4.8; };
+    tr2("Taxable value", "Rs. " + money(t.taxable));
+    if (inv.intra) { tr2("CGST", "Rs. " + money(t.cgst)); tr2("SGST", "Rs. " + money(t.sgst)); } else tr2("IGST", "Rs. " + money(t.igst));
+    if (t.roundOff) tr2("Round off", money(t.roundOff));
+    doc.setDrawColor(40); doc.line(W - M - 62, y - 3, W - M, y - 3); y += 1.5;
+    tr2("Total", "Rs. " + f0.format(t.total || 0), true);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.splitTextToSize(pdfText(inWords(t.total || 0)), W - 2 * M).forEach((ln) => { doc.text(ln, M, y); y += 4.4; });
+    y += 3;
+    if (s.bank) { doc.setFontSize(8); doc.setTextColor(110); doc.text("PAYMENT DETAILS", M, y); doc.setTextColor(0); y += 4; doc.setFontSize(9); doc.splitTextToSize(pdfText(s.bank), 110).forEach((ln) => { doc.text(ln, M, y); y += 4.2; }); y += 2; }
+    if (s.terms) { doc.setFontSize(8); doc.setTextColor(90); doc.splitTextToSize(pdfText(s.terms), 110).forEach((ln) => { doc.text(ln, M, y); y += 3.8; }); doc.setTextColor(0); }
+    const sy = Math.max(y + 6, 262);
+    doc.setFontSize(9); doc.text(pdfText("For " + (s.name || "")), W - M, Math.min(sy, 280), { align: "right" });
+    doc.setTextColor(110); doc.text("Authorised signatory", W - M, Math.min(sy + 12, 288), { align: "right" }); doc.setTextColor(0);
+    if (e.ewbNo) ewbPage(doc, inv, s, c, t, tr, e);
+    await saveFile(`${inv.no.replace(/[\/\\]/g, "-")}.pdf`, doc.output("blob"));
+  }
+  function ewbPage(doc, inv, s, c, t, tr, e) {
+    doc.addPage();
+    const W = 210, M = 14; let y = M + 4;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("E-WAY BILL", M, y + 2);
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(110); doc.text(pdfText("Details as generated on the e-way bill portal. Verify at ewaybillgst.gov.in"), M, y + 8); doc.setTextColor(0);
+    try { const cv = document.createElement("canvas"); window.JsBarcode(cv, e.ewbNo, { format: "CODE128", displayValue: false, margin: 0, height: 50, width: 2, background: "#ffffff" }); doc.addImage(cv.toDataURL("image/png"), "PNG", W - M - 70, y - 4, 70, 14); } catch (x) {}
+    doc.setFont("courier", "bold"); doc.setFontSize(12); doc.text(e.ewbNo, W - M, y + 15, { align: "right" });
+    y += 24;
+    const hsn = [...new Set((inv.lines || []).map((l) => l.hsn).filter(Boolean))].join(", ");
+    const rows = [
+      ["E-way bill no.", e.ewbNo], ["Generated", e.ewbDt || "-"], ["Valid until", e.ewbValid || "-"], ["Generated by", `${s.gstin || "-"}  ${s.name || ""}`],
+      e.irn ? ["IRN", e.irn] : null,
+      ["PART A", null],
+      ["GSTIN of supplier", `${s.gstin || "-"}  ${s.name || ""}`], ["Place of dispatch", [s.city, s.state, s.pin].filter(Boolean).join(", ")],
+      ["GSTIN of recipient", `${c.gstin || "URP"}  ${c.name || ""}`], ["Place of delivery", [c.city, c.state, c.pin].filter(Boolean).join(", ")],
+      ["Document", `Tax invoice ${inv.no}, ${dmy(inv.date)}`], ["Value of goods", "Rs. " + f2.format(num(t.total))], ["HSN codes", hsn || "-"], ["Reason for transport", "Outward - Supply"],
+      ["PART B", null],
+      ["Mode", tr.vehicle ? "Road" : "-"], ["Vehicle no.", tr.vehicle || "-"], ["From", s.city || "-"], ["Transporter", [tr.transName, tr.transId].filter(Boolean).join("  ") || "-"], ["Approx. distance", tr.distance ? tr.distance + " km" : "As calculated by the portal"],
+    ].filter(Boolean);
+    rows.forEach(([k, v]) => {
+      if (v === null) { y += 3; doc.setFillColor(238, 243, 244); doc.rect(M, y - 4.5, W - 2 * M, 7, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(k, M + 2, y); y += 6; return; }
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(110); doc.text(k, M + 2, y); doc.setTextColor(0);
+      const lines = doc.splitTextToSize(pdfText(v), W - 2 * M - 58); lines.forEach((ln, i) => doc.text(ln, M + 56, y + i * 4.2));
+      y += Math.max(1, lines.length) * 4.2 + 2;
+    });
+  }
+
+  // ---------- Labels PDF (A4, 24 per sheet) ----------
+  async function labelsPdf(items, filename) {
+    if (!items.length) return;
+    try { await Promise.all([lib("pdf"), lib("bar")]); } catch (e) { toast(e.message); return; }
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    const cw = 63.5, ch = 33.9, gap = 2.5, left = (210 - 3 * cw - 2 * gap) / 2, top = (297 - 8 * ch) / 2;
+    const canvas = document.createElement("canvas");
+    items.forEach((it, i) => {
+      const k = i % 24; if (i && !k) doc.addPage();
+      const x = left + (k % 3) * (cw + gap), y = top + Math.floor(k / 3) * ch;
+      doc.setDrawColor(230); doc.roundedRect(x, y, cw, ch, 2, 2);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.text(doc.splitTextToSize(pdfText(it.title), cw - 6)[0] || "", x + 3, y + 5);
+      try {
+        window.JsBarcode(canvas, it.value, { format: "CODE128", displayValue: false, margin: 0, height: 60, width: 2, background: "#ffffff" });
+        doc.addImage(canvas.toDataURL("image/png"), "PNG", x + 3, y + 7.5, cw - 6, 15);
+      } catch (e) {}
+      doc.setFont("courier", "normal"); doc.setFontSize(8); doc.text(pdfText(it.line), x + 3, y + 27);
+    });
+    await saveFile(filename, doc.output("blob"));
+  }
+
+  // ---------- Receipt view ----------
+  function showReceipt(r) {
+    viewing = { kind: "receipt", id: r.id };
+    const bst = billPay.get(r.id), spid = billParty(r);
+    $("vTitle").textContent = "Goods received " + r.no;
+    $("vSub").textContent = [r.supplier, r.ref ? "Challan " + r.ref : "", fdate(r.date)].filter(Boolean).join(" · ");
+    const sns = [];
+    (r.lines || []).forEach((l) => (l.serials || []).forEach((s) => sns.push({ title: l.name, value: (l.code || "") + "*" + s, line: "S/N " + s })));
+    $("vBody").innerHTML = `<div class="lines">${(r.lines || []).map((l) => `<div class="line"><div class="line-top"><div class="grow"><div class="p-name">${esc(l.name)}</div><div class="p-meta"><code>${esc(l.code)}</code></div></div>${lineStatus(num(l.expected), num(l.qty))}</div>
+      <div class="line-nums"><div class="mini">As per challan<span class="val">${num(l.expected) || "—"}</span></div><div class="mini">Received<span class="val">${num(l.qty)} ${esc(l.unit || "")}</span></div></div>
+      ${(l.serials || []).length ? `<div class="serials">${l.serials.map((s) => `<span class="sn plain">${esc(s)}</span>`).join("")}</div>` : ""}</div>`).join("")}</div>
+      ${r.notes ? `<p class="muted">${esc(r.notes)}</p>` : ""}`;
+    if (num(r.billAmount) || spid) $("vBody").insertAdjacentHTML("afterbegin", `<div class="row" style="justify-content:space-between"><div class="row">${num(r.billAmount) ? `<span class="small">Bill amount <b>${rs2(num(r.billAmount))}</b></span> ${payPill(bst)}` : `<span class="muted small">No bill amount entered</span>`}</div><div class="row">${spid ? `<button type="button" class="btn ghost" id="rcParty">Supplier statement</button>` : ""}${spid && S.canWrite && bst && bst.left > 0.5 ? `<button type="button" class="btn" id="rcPay">Record payment</button>` : ""}</div></div>`);
+    $("vFoot").innerHTML = `<span class="muted small">${sns.length ? `Labels encode product code and serial, so one scan at dispatch finds both.` : ""}</span><div class="row"><button type="button" class="btn" data-close>Close</button>${sns.length ? `<button type="button" class="btn primary" id="vLabels">Download ${sns.length} serial labels</button>` : ""}</div>`;
+    const lb = $("vLabels"); if (lb) lb.onclick = () => labelsPdf(sns, `labels-${r.no}.pdf`);
+    if ($("rcParty")) $("rcParty").onclick = () => showParty(spid);
+    if ($("rcPay")) $("rcPay").onclick = () => openPayment(spid, r.id);
+    if (!$("vDlg").open) $("vDlg").showModal();
+  }
+
+  // ---------- CUSTOMERS & SUPPLIERS ----------
+  let partyIdx = new Map(), invPay = new Map(), billPay = new Map();
+  let ptype = "customer", viewing = null;
+  const addDays = (d, n) => { const t = new Date(String(d).slice(0, 10) + "T00:00:00"); if (isNaN(t)) return ""; t.setDate(t.getDate() + n); return t.toLocaleDateString("en-CA"); };
+  function matchParty(type, id, gstin, name) {
+    const list = S.parties.filter((p) => p.type === type);
+    if (id && list.some((p) => p.id === id)) return id;
+    const g = K(gstin); if (g) { const m = list.find((p) => K(p.gstin) === g); if (m) return m.id; }
+    const n = K(name); if (n) { const m = list.find((p) => K(p.name) === n); if (m) return m.id; }
+    return null;
+  }
+  const invParty = (inv) => matchParty("customer", inv.partyId, inv.customer && inv.customer.gstin, inv.customer && inv.customer.name);
+  const billParty = (r) => matchParty("supplier", r.partyId, "", r.supplier);
+  function rebuildParties() {
+    partyIdx = new Map(); invPay = new Map(); billPay = new Map();
+    S.parties.forEach((p) => partyIdx.set(p.id, { p, docs: [], pays: [], billed: 0, paid: 0, due: 0, overdue: 0, advance: 0 }));
+    S.invoices.forEach((inv) => { const id = invParty(inv); if (id) partyIdx.get(id).docs.push({ kind: "inv", id: inv.id, no: inv.no, date: inv.date, amount: num(inv.totals && inv.totals.total), ref: inv }); });
+    S.receipts.forEach((r) => { if (!num(r.billAmount)) return; const id = billParty(r); if (id) partyIdx.get(id).docs.push({ kind: "bill", id: r.id, no: r.ref ? "Bill " + r.ref : r.no, date: r.date, amount: num(r.billAmount), ref: r }); });
+    S.payments.forEach((pm) => { const e = partyIdx.get(pm.partyId); if (e) e.pays.push(pm); });
+    const td = today();
+    for (const e of partyIdx.values()) {
+      const ob = num(e.p.openingBalance);
+      if (ob > 0) e.docs.push({ kind: "open", id: "open", no: "Opening balance", date: "", amount: ob });
+      e.docs.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.no).localeCompare(String(b.no)));
+      e.pays.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.createdAt).localeCompare(String(b.createdAt)));
+      const left = new Map(e.docs.map((d) => [d.id, d.amount]));
+      let pool = 0;
+      e.pays.forEach((pm) => {
+        const a = num(pm.amount); e.paid += a;
+        if (pm.docId && left.has(pm.docId)) { const take = Math.min(a, left.get(pm.docId)); left.set(pm.docId, left.get(pm.docId) - take); pool += a - take; } else pool += a;
+      });
+      e.docs.forEach((d) => { const take = Math.min(pool, left.get(d.id)); left.set(d.id, r2(left.get(d.id) - take)); pool = r2(pool - take); });
+      const days = e.p.creditDays === "" || e.p.creditDays == null ? 30 : num(e.p.creditDays);
+      e.docs.forEach((d) => {
+        const l = r2(left.get(d.id)), dueDate = d.date ? addDays(d.date, days) : "";
+        d.st = { total: d.amount, paid: r2(d.amount - l), left: l, dueDate, overdue: l > 0.5 && (!dueDate || dueDate < td) };
+        if (d.kind === "inv") invPay.set(d.id, d.st); if (d.kind === "bill") billPay.set(d.id, d.st);
+        e.billed += d.amount; if (d.st.overdue) e.overdue += l;
+      });
+      e.billed = r2(e.billed); e.paid = r2(e.paid); e.due = r2(e.billed - e.paid); e.overdue = r2(e.overdue); e.advance = pool;
+      e.last = e.docs.filter((d) => d.date).map((d) => d.date).concat(e.pays.map((p) => p.date)).sort().pop() || "";
+    }
+  }
+  function payPill(st) {
+    if (!st) return "";
+    if (st.left <= 0.5) return `<span class="pill ok">Paid</span>`;
+    if (st.overdue) return `<span class="pill err">Overdue ${rs(st.left)}</span>`;
+    if (st.paid > 0.5) return `<span class="pill warn">Part paid · ${rs(st.left)} due</span>`;
+    return `<span class="pill neutral">Due ${st.dueDate ? fdate(st.dueDate) : ""}</span>`;
+  }
+  const money = (n) => (n >= 1e7 ? "₹" + (n / 1e7).toFixed(2) + " Cr" : n >= 1e5 ? "₹" + (n / 1e5).toFixed(2) + " L" : rs(n));
+  function renderParties() {
+    const ready = S.ready.pt;
+    let recv = 0, over = 0, pay = 0, overN = 0, month = 0, monthN = 0;
+    const m0 = today().slice(0, 7);
+    for (const e of partyIdx.values()) {
+      if (e.p.type === "customer") { recv += Math.max(0, e.due); over += e.overdue; if (e.overdue > 0.5) overN++; }
+      else pay += Math.max(0, e.due);
+    }
+    S.payments.forEach((pm) => { if (pm.type === "in" && String(pm.date).slice(0, 7) === m0) { month += num(pm.amount); monthN++; } });
+    $("pRecv").textContent = ready ? money(recv) : "–";
+    $("pRecvS").textContent = ready ? `${S.parties.filter((p) => p.type === "customer").length} customers` : " ";
+    $("pOver").textContent = ready ? money(over) : "–";
+    $("pOverS").textContent = ready ? (overN ? `${overN} customer${overN > 1 ? "s" : ""} past their credit period` : "Nothing overdue") : " ";
+    $("pOverBox").classList.toggle("attn", over > 0.5);
+    $("pPay").textContent = ready ? money(pay) : "–";
+    $("pPayS").textContent = ready ? `${S.parties.filter((p) => p.type === "supplier").length} suppliers` : " ";
+    $("pMonth").textContent = ready ? money(month) : "–";
+    $("pMonthS").textContent = ready ? `${monthN} payment${monthN === 1 ? "" : "s"}` : " ";
+    document.querySelectorAll("[data-ptype]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.ptype === ptype)));
+    const q = $("partyQ").value.trim().toLowerCase(), f = $("partyFilter").value;
+    const list = [...partyIdx.values()].filter((e) => e.p.type === ptype)
+      .filter((e) => f === "all" || (f === "due" ? e.due > 0.5 : e.overdue > 0.5))
+      .filter((e) => !q || [e.p.name, e.p.city, e.p.phone, e.p.gstin, e.p.contact].some((x) => String(x || "").toLowerCase().includes(q)))
+      .sort((a, b) => b.overdue - a.overdue || b.due - a.due || String(a.p.name).localeCompare(String(b.p.name)));
+    const el = $("partyList"), word = ptype === "customer" ? "customers" : "suppliers";
+    if (!ready) { el.innerHTML = `<div class="empty"><h3>${S.db === false ? "Data isn't available here" : "Loading…"}</h3></div>`; return; }
+    if (!list.length) {
+      el.innerHTML = `<div class="empty"><h3>${S.parties.some((p) => p.type === ptype) ? "Nobody matches" : `No ${word} yet`}</h3><p>${S.parties.some((p) => p.type === ptype) ? "Try another search or filter." : ptype === "customer" ? "Customers are saved when you create an invoice, or add one now." : "Suppliers are saved when you receive goods, or add one now."}</p></div>`;
+      return;
+    }
+    el.innerHTML = list.map((e) => {
+      const p = e.p, docs = e.docs.filter((d) => d.kind !== "open").length;
+      return `<button type="button" class="rrow" data-party="${esc(p.id)}">
+        <span><b>${esc(p.name)}</b><div class="muted small">${esc([p.city, p.state].filter(Boolean).join(", ") || "No address yet")}</div></span>
+        <span class="small"><div>${esc(p.phone || p.contact || "")}</div><div class="muted mono">${esc(p.gstin || "No GSTIN")}</div></span>
+        <span class="when small muted">${docs} ${ptype === "customer" ? "invoice" : "bill"}${docs === 1 ? "" : "s"}${e.last ? `<div>Last ${fdate(e.last)}</div>` : ""}</span>
+        <span style="text-align:right"><div class="amt">${e.due > 0.5 ? rs(e.due) : e.due < -0.5 ? rs(-e.due) + " advance" : "Settled"}</div>${e.overdue > 0.5 ? `<span class="pill err">${rs(e.overdue)} overdue</span>` : ""}</span>
+      </button>`;
+    }).join("");
+  }
+  document.querySelectorAll("[data-ptype]").forEach((b) => b.onclick = () => { ptype = b.dataset.ptype; renderParties(); });
+  $("partyQ").addEventListener("input", renderParties);
+  $("partyFilter").addEventListener("change", renderParties);
+  $("partyList").addEventListener("click", (e) => { const r = e.target.closest("[data-party]"); if (r) showParty(r.dataset.party); });
+  $("addCustomerBtn").onclick = () => openPartyEdit(null, "customer");
+  $("addSupplierBtn").onclick = () => openPartyEdit(null, "supplier");
+
+  function showParty(id) {
+    const e = partyIdx.get(id); if (!e) { if ($("vDlg").open) $("vDlg").close(); return; }
+    viewing = { kind: "party", id };
+    const p = e.p, cust = p.type === "customer";
+    $("vTitle").textContent = p.name;
+    $("vSub").textContent = [cust ? "Customer" : "Supplier", p.gstin ? "GSTIN " + p.gstin : "", p.phone].filter(Boolean).join(" · ");
+    const rows = [];
+    e.docs.forEach((d) => rows.push({ date: d.date, sort: (d.date || "0000") + "a", label: d.kind === "inv" ? `Invoice ${d.no}` : d.kind === "bill" ? `${d.no} (${d.ref.no})` : "Opening balance", debit: d.amount, credit: 0, doc: d }));
+    e.pays.forEach((pm) => rows.push({ date: pm.date, sort: (pm.date || "0000") + "b" + pm.createdAt, label: `${cust ? "Received" : "Paid"} · ${pm.mode || ""}${pm.ref ? " · " + pm.ref : ""}${pm.docId && e.docs.find((d) => d.id === pm.docId) ? " · for " + e.docs.find((d) => d.id === pm.docId).no : ""}`, debit: 0, credit: num(pm.amount), pay: pm }));
+    rows.sort((a, b) => a.sort.localeCompare(b.sort));
+    let bal = 0; rows.forEach((r) => { bal = r2(bal + r.debit - r.credit); r.bal = bal; });
+    e._rows = rows;
+    $("vBody").innerHTML = `
+      <div class="kv"><div><b>${rs(e.billed)}</b><span>${cust ? "Invoiced" : "Billed"}</span></div><div><b>${rs(e.paid)}</b><span>${cust ? "Received" : "Paid"}</span></div><div><b style="color:${e.overdue > 0.5 ? "var(--crit)" : "inherit"}">${e.due < -0.5 ? rs(-e.due) + " adv." : rs(Math.max(0, e.due))}</b><span>${e.overdue > 0.5 ? rs(e.overdue) + " overdue" : cust ? "Still to receive" : "Still to pay"}</span></div></div>
+      <div class="row small muted">${esc([p.contact, p.phone, p.email].filter(Boolean).join(" · "))}${p.address || p.city ? `<span>${esc([p.address, p.city, p.state, p.pin].filter(Boolean).join(", "))}</span>` : ""}<span>Credit period ${p.creditDays === "" || p.creditDays == null ? 30 : num(p.creditDays)} days</span></div>
+      ${p.notes ? `<p class="small">${esc(p.notes)}</p>` : ""}
+      <div class="row">
+        ${S.canWrite ? `<button type="button" class="btn primary" id="ptPay">${cust ? "Record payment received" : "Record payment made"}</button>` : ""}
+        ${S.canWrite && cust ? `<button type="button" class="btn" id="ptSell">New sale to ${esc(p.name.split(" ")[0])}</button>` : ""}
+        ${S.canWrite ? `<button type="button" class="btn" id="ptEdit">Edit details</button>` : ""}
+        ${rows.length ? `<button type="button" class="btn ghost" id="ptCsv">Download statement</button>` : ""}
+      </div>
+      <div class="section-t">Statement</div>
+      ${rows.length ? `<div class="table-wrap"><table class="grid" style="font-size:14px"><thead><tr><th>Date</th><th>Details</th><th style="text-align:right">${cust ? "Invoiced" : "Billed"}</th><th style="text-align:right">${cust ? "Received" : "Paid"}</th><th style="text-align:right">Balance</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows.map((r, i) => `<tr ${r.doc && r.doc.kind !== "open" ? `data-open="${i}" style="cursor:pointer"` : ""}><td>${r.date ? fdate(r.date) : "—"}</td><td style="white-space:normal">${esc(r.label)}</td><td style="text-align:right">${r.debit ? f2.format(r.debit) : ""}</td><td style="text-align:right">${r.credit ? f2.format(r.credit) : ""}</td><td style="text-align:right;font-weight:600">${f2.format(r.bal)}</td><td>${r.doc ? payPill(r.doc.st) : ""}</td><td>${r.pay && S.canWrite ? `<button type="button" class="icon-btn" data-delpay="${esc(r.pay.id)}" aria-label="Delete this payment">×</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="muted">No ${cust ? "invoices" : "bills"} or payments yet.</p>`}`;
+    $("vFoot").innerHTML = `<span class="muted small">${e.advance > 0.5 ? `${rs(e.advance)} paid in advance, not yet used` : "Payments settle the oldest bills first unless you pick one"}</span><div class="row"><button type="button" class="btn" data-close>Close</button></div>`;
+    const on = (x, fn) => { const el = $(x); if (el) el.onclick = fn; };
+    on("ptPay", () => openPayment(id, null));
+    on("ptEdit", () => openPartyEdit(id));
+    on("ptSell", () => { $("vDlg").close(); startSaleFor(p); });
+    on("ptCsv", () => {
+      const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const csv = ["Date,Details," + (cust ? "Invoiced,Received" : "Billed,Paid") + ",Balance"].concat(rows.map((r) => [r.date, r.label, r.debit || "", r.credit || "", r.bal].map(q).join(","))).join("\n");
+      saveFile(`statement-${p.name.replace(/[^A-Za-z0-9]+/g, "-")}-${today()}.csv`, csv);
+    });
+    $("vBody").querySelectorAll("[data-open]").forEach((tr) => tr.onclick = (ev) => {
+      if (ev.target.closest("[data-delpay]")) return;
+      const d = rows[+tr.dataset.open].doc; if (d.kind === "inv") showInvoice(d.ref); else showReceipt(d.ref);
+    });
+    $("vBody").querySelectorAll("[data-delpay]").forEach((b) => b.onclick = async () => {
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Delete?"; b.style.width = "auto"; return; }
+      try { await col("payments").doc(b.dataset.delpay).delete(); toast("Payment deleted"); } catch (x) { writeFailed(x); }
+    });
+    if (!$("vDlg").open) $("vDlg").showModal();
+  }
+  function startSaleFor(p) {
+    sell.customer = Object.assign(freshSell().customer, { name: p.name, phone: p.phone || "", gstin: p.gstin || "", state: p.state || "", address: p.address || "", city: p.city || "", pin: p.pin || "" });
+    sell.partyId = p.id; saveSell(); fillSellForm(); setView("sell"); custHint();
+  }
+
+  const PTF = ["name", "type", "contact", "phone", "email", "gstin", "state", "address", "city", "pin", "creditDays", "openingBalance", "notes"];
+  let ptEditing = null;
+  function openPartyEdit(id, type, preset) {
+    ptEditing = id || null;
+    const p = id ? S.parties.find((x) => x.id === id) : null;
+    $("ptTitle").textContent = p ? "Edit " + p.name : type === "supplier" ? "Add supplier" : "Add customer";
+    PTF.forEach((k) => { $("pt-" + k).value = p ? (p[k] ?? "") : ""; });
+    if (!p) { $("pt-type").value = type || "customer"; $("pt-creditDays").value = 30; }
+    if (preset) Object.keys(preset).forEach((k) => { if ($("pt-" + k)) $("pt-" + k).value = preset[k] || ""; });
+    const e = id && partyIdx.get(id), used = e && (e.docs.some((d) => d.kind !== "open") || e.pays.length);
+    $("ptDelete").hidden = !p; $("ptDelete").classList.remove("armed"); $("ptDelete").textContent = "Delete"; $("ptDelete").dataset.used = used ? "1" : "";
+    $("ptErr").hidden = true;
+    $("ptDlg").showModal(); $("pt-name").focus();
+  }
+  $("pt-gstin").addEventListener("input", () => { if (!$("pt-state").value) { const st = stateFromGstin(K($("pt-gstin").value)); if (st) $("pt-state").value = st; } });
+  $("ptForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault(); if (!S.db) return;
+    const d = {}; PTF.forEach((k) => (d[k] = $("pt-" + k).value.trim()));
+    d.gstin = K(d.gstin); d.creditDays = d.creditDays === "" ? 30 : Math.max(0, Math.round(num(d.creditDays))); d.openingBalance = num(d.openingBalance);
+    const err = (m) => { $("ptErr").textContent = m; $("ptErr").hidden = false; };
+    if (!d.name) return err("Add a name.");
+    if (d.gstin && !GSTIN_RE.test(d.gstin)) return err("GSTIN should be 15 characters.");
+    if (d.pin && !/^\d{6}$/.test(d.pin)) return err("PIN code should be 6 digits.");
+    const dup = S.parties.find((x) => x.id !== ptEditing && x.type === d.type && (K(x.name) === K(d.name) || (d.gstin && K(x.gstin) === d.gstin)));
+    if (dup) return err(`${dup.name} is already saved as a ${d.type}.`);
+    d.updatedAt = new Date().toISOString();
+    try {
+      if (ptEditing) { const old = S.parties.find((x) => x.id === ptEditing); d.createdAt = old.createdAt || d.updatedAt; await col("parties").doc(ptEditing).set(d); }
+      else { d.createdAt = d.updatedAt; await col("parties").doc(newId(d.type === "supplier" ? "s_" : "c_")).set(d); }
+      toast("Saved " + d.name); $("ptDlg").close();
+    } catch (x) { writeFailed(x); }
+  });
+  $("ptDelete").addEventListener("click", async () => {
+    const b = $("ptDelete");
+    if (b.dataset.used) { $("ptErr").textContent = "This party has invoices, bills or payments, so it can't be deleted. You can rename it instead."; $("ptErr").hidden = false; return; }
+    if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Yes, delete"; return; }
+    try { await col("parties").doc(ptEditing).delete(); toast("Deleted"); $("ptDlg").close(); if ($("vDlg").open && viewing && viewing.kind === "party") $("vDlg").close(); } catch (x) { writeFailed(x); }
+  });
+
+  let payFor = null;
+  function openPayment(partyId, docId) {
+    const e = partyIdx.get(partyId); if (!e) { toast("Save this customer first."); return; }
+    payFor = e; const cust = e.p.type === "customer";
+    $("payTitle").textContent = cust ? "Payment received" : "Payment made";
+    $("paySub").textContent = `${e.p.name} · ${e.due > 0.5 ? rs(e.due) + " due" : "nothing due"}`;
+    const open = e.docs.filter((d) => d.st.left > 0.5);
+    $("pay-doc").innerHTML = `<option value="">Oldest dues first</option>` + open.map((d) => `<option value="${esc(d.id)}">${esc(d.no)}${d.date ? " · " + fdate(d.date) : ""} · ${rs(d.st.left)} due</option>`).join("");
+    $("pay-doc").value = docId && open.some((d) => d.id === docId) ? docId : "";
+    const target = docId ? open.find((d) => d.id === docId) : null;
+    $("pay-amount").value = target ? target.st.left : e.due > 0 ? e.due : "";
+    $("pay-date").value = today(); $("pay-ref").value = ""; $("pay-note").value = ""; $("payErr").hidden = true;
+    $("payDlg").showModal(); $("pay-amount").focus();
+  }
+  $("payForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault(); if (!S.db || !payFor) return;
+    const amount = r2(num($("pay-amount").value));
+    if (!(amount > 0)) { $("payErr").textContent = "Enter the amount."; $("payErr").hidden = false; return; }
+    const d = { partyId: payFor.p.id, type: payFor.p.type === "customer" ? "in" : "out", amount, date: $("pay-date").value || today(), mode: $("pay-mode").value, ref: $("pay-ref").value.trim(), docId: $("pay-doc").value || "", note: $("pay-note").value.trim(), createdAt: new Date().toISOString() };
+    $("paySave").disabled = true;
+    try { await col("payments").add(d); toast(`${rs(amount)} ${d.type === "in" ? "received from" : "paid to"} ${payFor.p.name}`); $("payDlg").close(); if (viewing && viewing.kind !== "party") viewing.refresh = true; }
+    catch (x) { writeFailed(x); }
+    finally { $("paySave").disabled = false; }
+  });
+
+  // Link sales and deliveries to saved parties, creating the party the first time.
+  async function ensureParty(type, id, data) {
+    const found = matchParty(type, id, data.gstin, data.name);
+    const clean = {}; Object.keys(data).forEach((k) => { if (data[k] !== "" && data[k] != null) clean[k] = data[k]; });
+    if (found) { try { await col("parties").doc(found).update(Object.assign(clean, { updatedAt: new Date().toISOString() })); } catch (x) {} return found; }
+    const nid = newId(type === "supplier" ? "s_" : "c_"), now = new Date().toISOString();
+    await col("parties").doc(nid).set(Object.assign({ name: "", type, contact: "", phone: "", email: "", gstin: "", state: "", address: "", city: "", pin: "", creditDays: 30, openingBalance: 0, notes: "" }, clean, { type, createdAt: now, updatedAt: now }));
+    return nid;
+  }
+  function custHint() {
+    const el = $("custHint"), id = matchParty("customer", sell.partyId, sell.customer.gstin, sell.customer.name), e = id && partyIdx.get(id);
+    if (!e) { el.hidden = !sell.customer.name.trim(); el.innerHTML = sell.customer.name.trim() ? `<span class="pill info">New customer · will be saved with the invoice</span>` : ""; return; }
+    el.hidden = false;
+    el.innerHTML = `<span class="pill ok">Saved customer</span> ${e.overdue > 0.5 ? `<span class="pill err">${rs(e.overdue)} overdue</span>` : e.due > 0.5 ? `<span class="pill warn">${rs(e.due)} outstanding</span>` : `<span class="pill neutral">No dues</span>`}`;
+  }
+  function supHint() {
+    const el = $("supHint"), name = (rcv.supplier || "").trim(), id = name && matchParty("supplier", rcv.partyId, "", name), e = id && partyIdx.get(id);
+    el.hidden = !name;
+    el.innerHTML = !name ? "" : e ? `<span class="pill ok">Saved supplier</span> ${e.due > 0.5 ? `<span class="pill warn">${rs(e.due)} to pay</span>` : ""}` : `<span class="pill info">New supplier · will be saved with this delivery</span>`;
+  }
+  $("c-name").addEventListener("change", () => {
+    const id = matchParty("customer", null, "", sell.customer.name), p = id && S.parties.find((x) => x.id === id);
+    if (p) { sell.customer = Object.assign({}, sell.customer, { name: p.name, phone: p.phone || sell.customer.phone, gstin: p.gstin || sell.customer.gstin, state: p.state || sell.customer.state, address: p.address || sell.customer.address, city: p.city || sell.customer.city, pin: p.pin || sell.customer.pin }); sell.partyId = p.id; saveSell(); fillSellForm(); renderSellTotals(); }
+    else sell.partyId = null;
+    custHint();
+  });
+  $("c-name").addEventListener("input", custHint);
+  $("rcv-supplier").addEventListener("change", () => { const id = matchParty("supplier", null, "", rcv.supplier); const p = id && S.parties.find((x) => x.id === id); if (p) { rcv.supplier = p.name; rcv.partyId = p.id; $("rcv-supplier").value = p.name; } else rcv.partyId = null; saveRcv(); supHint(); });
+  $("rcv-supplier").addEventListener("input", supHint);
+
+  // ---------- RECORDS ----------
+  function renderRecords() {
+    const q = $("recQ").value.trim().toLowerCase();
+    document.querySelectorAll("[data-rec]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.rec === recTab)));
+    const el = $("rlist");
+    const match = (d, fields) => !q || fields.some((f) => String(f || "").toLowerCase().includes(q)) || (d.lines || []).some((l) => (l.serials || []).some((s) => s.toLowerCase().includes(q)) || String(l.name).toLowerCase().includes(q));
+    if (recTab === "inv") {
+      const list = S.invoices.filter((d) => match(d, [d.no, d.customer && d.customer.name, d.customer && d.customer.gstin])).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      const pending = S.invoices.filter((d) => isB2B(d) && !(d.einv && d.einv.irn));
+      const ready = pending.filter((d) => !einvProblems(d).length);
+      $("recActions").innerHTML = S.canWrite && S.invoices.length ? `${pending.length ? `<button type="button" class="btn" id="recDl" ${ready.length ? "" : "disabled"}>Download e-invoice file for ${ready.length} pending</button>` : ""}<button type="button" class="btn" id="recImp">Import portal results</button>${pending.length > ready.length ? `<span class="muted small">${pending.length - ready.length} pending invoice${pending.length - ready.length === 1 ? " needs" : "s need"} details first. Open ${pending.length - ready.length === 1 ? "it" : "them"} to see what's missing.</span>` : ""}` : "";
+      if ($("recDl")) $("recDl").onclick = () => downloadEinv(ready);
+      if ($("recImp")) $("recImp").onclick = () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, null));
+      const badge = (d) => { const e = d.einv || {}; return [isB2B(d) ? (e.irn ? `<span class="pill ok">E-invoice ✓</span>` : `<span class="pill warn">IRN pending</span>`) : "", e.ewbNo ? `<span class="pill ok">E-way bill ✓</span>` : ewbNeeded(d) ? `<span class="pill warn">E-way bill pending</span>` : "", payPill(invPay.get(d.id))].join(" "); };
+      el.innerHTML = list.length ? list.map((d) => `<button type="button" class="rrow" data-inv="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.customer && d.customer.name)}</b><div class="muted small">${(d.lines || []).length} items · ${(d.lines || []).reduce((a, l) => a + num(l.qty), 0)} units</div><div class="row" style="margin-top:4px">${badge(d)}</div></span><span class="when muted small">${fdate(d.date)}</span><span class="amt">${rs(d.totals ? d.totals.total : 0)}</span></button>`).join("")
+        : `<div class="empty"><h3>${S.invoices.length ? "No invoices match" : "No invoices yet"}</h3><p>${S.invoices.length ? "Try another search." : "Invoices you create in Sell appear here."}</p></div>`;
+    } else {
+      $("recActions").innerHTML = "";
+      const list = S.receipts.filter((d) => match(d, [d.no, d.supplier, d.ref])).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      el.innerHTML = list.length ? list.map((d) => { const u = (d.lines || []).reduce((a, l) => a + num(l.qty), 0), diff = (d.lines || []).some((l) => num(l.expected) && num(l.expected) !== num(l.qty));
+        return `<button type="button" class="rrow" data-grn="${esc(d.id)}"><span class="no">${esc(d.no)}</span><span><b>${esc(d.supplier || "Supplier not given")}</b><div class="muted small">${d.ref ? "Challan " + esc(d.ref) + " · " : ""}${(d.lines || []).length} products</div></span><span class="when muted small">${fdate(d.date)}</span><span>${diff ? `<span class="pill warn">Differences</span>` : ""} ${payPill(billPay.get(d.id))} <b>${u}</b> <span class="muted small">units</span></span></button>`; }).join("")
+        : `<div class="empty"><h3>${S.receipts.length ? "No receipts match" : "Nothing received yet"}</h3><p>${S.receipts.length ? "Try another search." : "Deliveries you check in under Receive appear here."}</p></div>`;
+    }
+  }
+  document.querySelectorAll("[data-rec]").forEach((b) => b.onclick = () => { recTab = b.dataset.rec; renderRecords(); });
+  $("recQ").addEventListener("input", renderRecords);
+  $("rlist").addEventListener("click", (e) => {
+    const i = e.target.closest("[data-inv]"), g = e.target.closest("[data-grn]");
+    if (i) { const d = S.invoices.find((x) => x.id === i.dataset.inv); if (d) showInvoice(d); }
+    if (g) { const d = S.receipts.find((x) => x.id === g.dataset.grn); if (d) showReceipt(d); }
+  });
+
+  // ---------- SETTINGS ----------
+  const SF = ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "prefix", "gst", "bank", "terms"];
+  function fillSettings() {
+    const a = document.activeElement; if (a && $("setForm").contains(a) && a.tagName !== "BUTTON") return;
+    SF.forEach((k) => ($("s-" + k).value = S.settings[k] ?? ""));
+    $("s-incl").checked = !!S.settings.pricesIncludeGst;
+    $("bizName").textContent = S.settings.name || "Pump & Solar Stock";
+  }
+  $("setForm").addEventListener("submit", async (e) => {
+    e.preventDefault(); if (!S.db) return;
+    const d = {}; SF.forEach((k) => (d[k] = $("s-" + k).value.trim()));
+    d.gstin = d.gstin.toUpperCase(); d.pricesIncludeGst = $("s-incl").checked; d.updatedAt = new Date().toISOString();
+    if (d.prefix && !/^[A-Za-z1-9][A-Za-z0-9]{0,4}$/.test(d.prefix)) { toast("Invoice prefix: up to 5 letters or digits, not starting with 0."); return; }
+    if (d.gstin && !GSTIN_RE.test(d.gstin)) { toast("GSTIN should be 15 characters."); return; }
+    if (d.pin && !/^\d{6}$/.test(d.pin)) { toast("PIN code should be 6 digits."); return; }
+    if (d.gstin && !d.state) d.state = stateFromGstin(d.gstin);
+    try { await S.db.doc("settings/business").set(d); toast("Business details saved"); } catch (x) { writeFailed(x); }
+  });
+
+  // ---------- Navigation & wiring ----------
+  function setView(v) {
+    if (!["stock", "receive", "sell", "records", "parties", "settings"].includes(v)) v = "stock";
+    view = v; store.set("view", v);
+    document.querySelectorAll(".view").forEach((s) => (s.hidden = s.id !== "v-" + v));
+    document.querySelectorAll("nav.tabs button").forEach((b) => { if (b.dataset.view === v) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+    renderAll();
+    if (v === "receive" && matchMedia("(pointer: fine)").matches) $("rcv-scan").focus();
+  }
+  document.querySelectorAll("nav.tabs button").forEach((b) => b.onclick = () => setView(b.dataset.view));
+  document.querySelectorAll("dialog").forEach((d) => {
+    d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-close]")) d.close(); });
+  });
+  $("pDlg").addEventListener("close", () => { editing = null; });
+  $("importBtn").onclick = openImport;
+  $("addProductBtn").onclick = () => openProduct(null);
+  $("plist").addEventListener("click", (e) => {
+    const r = e.target.closest("[data-pid]"); if (r) return openProduct(r.dataset.pid);
+    const a = e.target.closest("[data-act]"); if (a) a.dataset.act === "import" ? openImport() : openProduct(null);
+  });
+  $("catChips").addEventListener("click", (e) => { const b = e.target.closest("[data-cat]"); if (!b) return; catFilter = b.dataset.cat; renderStock(); });
+  $("stockQ").addEventListener("input", renderStock);
+  $("stockLevel").addEventListener("change", renderStock);
+  const stateOpts = `<option value="">Select state</option>` + STATES.map((s) => `<option>${esc(s)}</option>`).join("");
+  $("c-state").innerHTML = stateOpts; $("s-state").innerHTML = stateOpts; $("pt-state").innerHTML = stateOpts;
+  $("p-uqc").innerHTML = UQC.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+  $("catOptions").innerHTML = DEFAULT_CATS.map((c) => `<option value="${esc(c)}"></option>`).join("");
+
+  mountScan("rcvScan", "rcv", onReceiveScan);
+  mountScan("sellScan", "sell", onSellScan);
+  fillRcvForm(); fillSellForm();
+
+  function renderAll() {
+    $("productOptions").innerHTML = S.products.map((p) => `<option value="${esc((p.code || "") + " — " + p.name)}"></option>`).join("");
+    if (view === "stock") renderStock();
+    if (view === "receive") renderReceive();
+    if (view === "sell") renderSell();
+    if (view === "records") renderRecords();
+    if (view === "parties") renderParties();
+    $("customerOptions").innerHTML = S.parties.filter((p) => p.type === "customer").map((p) => `<option value="${esc(p.name)}"></option>`).join("");
+    $("supplierOptions").innerHTML = S.parties.filter((p) => p.type === "supplier").map((p) => `<option value="${esc(p.name)}"></option>`).join("");
+    if (view === "sell") custHint();
+    if (view === "receive") supHint();
+    if ($("vDlg").open && viewing && viewing.kind === "party") showParty(viewing.id);
+    if ($("vDlg").open && viewing && viewing.refresh) {
+      const d = viewing.kind === "invoice" ? S.invoices.find((x) => x.id === viewing.id) : S.receipts.find((x) => x.id === viewing.id);
+      if (d) (viewing.kind === "invoice" ? showInvoice : showReceipt)(d);
+    }
+    if ($("pDlg").open && editing) { if (prod(editing)) renderProductStock(); else $("pDlg").close(); }
+  }
+  let raf = 0;
+  const schedule = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; rebuild(); rebuildParties(); renderAll(); }); };
+
+  setView(view);
+
+  // ---------- Connect ----------
+  (async () => {
+    const use = window.claude && window.claude.use ? (n) => window.claude.use(n) : () => Promise.resolve(null);
+    const [db, user, dl] = await Promise.all([use("db"), use("user"), use("downloads")]);
+    S.dl = dl;
+    if (user) { try { if ((await user.can("data.write")) === false) S.canWrite = false; } catch (e) {} }
+    applyWriteGate();
+    if (!S.canWrite) banner("You can view stock and records. To receive goods or create invoices, ask the owner for Contributor access.");
+    if (!db) { S.db = false; S.canWrite = false; applyWriteGate(); $("dot").className = "dot off"; $("conn").textContent = "Offline · open on claude.ai to use"; renderAll(); return; }
+    S.db = db;
+    const live = () => { $("dot").className = "dot live"; $("conn").textContent = "Live · shared with your team"; };
+    const lost = (e) => { $("dot").className = "dot off"; $("conn").textContent = e && e.code === "revoked" ? "Access changed · reload the page" : "Connection lost · reload the page"; };
+    const sub = (name, key, prop) => db.collection(name).onSnapshot((snap) => {
+      S[prop] = snap.docs.map((d) => Object.assign({}, d.data(), { id: d.id }));
+      S.ready[key] = true; live(); schedule();
+    }, lost);
+    sub("products", "p", "products"); sub("receipts", "r", "receipts"); sub("invoices", "i", "invoices"); sub("adjustments", "a", "adjustments"); sub("parties", "pt", "parties"); sub("payments", "pm", "payments");
+    db.doc("settings/business").onSnapshot((snap) => { S.settings = snap.exists ? snap.data() : {}; fillSettings(); schedule(); }, lost);
+  })();
+})();
+</script>
