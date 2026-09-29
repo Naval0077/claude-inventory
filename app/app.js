@@ -391,12 +391,15 @@
           <span class="p-main"><span class="p-name">${esc(p.name)}</span><span class="p-meta"><code>${esc(p.code || "no code")}</code>${p.brand || p.model ? " · " + esc([p.brand, p.model].filter(Boolean).join(" ")) : ""}${p.serialized ? " · serial tracked" : ""}</span></span>
           <span class="p-cat">${esc(p.category || "Other")}</span>
           <span class="p-spec">${esc(p.rating || "—")}<small>${esc(p.supply || "")}</small></span>
-          <span class="p-price money">${num(p.price) ? rs(num(p.price)) : num(p.mrp) ? `<span class="muted">MRP ${rs(num(p.mrp))}</span>` : "—"}<small>${num(p.price) ? "" : "No selling price · "}GST ${num(p.gst ?? defGst())}%</small></span>
+          <span class="p-price money">${num(p.price) ? rs(num(p.price)) : num(p.mrp) ? `<span class="muted">MRP ${rs(num(p.mrp))}</span>` : "—"}<small>${num(p.price) ? "" : "No selling price · "}GST ${gstOf(p)}%</small></span>
           <span class="p-stock"><span><b>${f0.format(qn)}</b> <span class="u">${esc(p.unit || "pcs")}</span></span><span class="pill ${l}">${LEVEL[l]}</span></span>
         </button>`;
       }).join("");
   }
   const defGst = () => (S.settings.gst === "" || S.settings.gst == null ? 18 : num(S.settings.gst));
+  // A product's GST %, falling back to the default whenever it's blank or zero (0% GST on
+  // pumps/motors/panels is never intentional here, so treat it the same as "not set").
+  const gstOf = (p) => num(p.gst) || defGst();
 
   // ---------- Product dialog ----------
   const PF = ["name", "code", "barcode", "category", "brand", "model", "rating", "supply", "unit", "uqc", "price", "cost", "mrp", "hsn", "gst", "reorderAt", "notes"];
@@ -735,15 +738,15 @@
   };
 
   // ---------- SELL ----------
-  // Default rate when a product has no saved selling price: strip GST out of MRP
-  // (or use MRP as-is if this business's prices already include GST).
+  // Default rate when a product has no saved selling price: MRP, with GST excluded and
+  // the standard discount deducted. This is always GST-exclusive; GST is added back on
+  // top at billing time (see calc()).
   function defaultRate(p) {
     if (num(p.price)) return num(p.price);
     const mrp = num(p.mrp); if (!mrp) return 0;
     const std = Math.min(100, Math.max(0, num(S.settings.stdDiscount)));
-    const net = mrp * (1 - std / 100);
-    const gst = num(p.gst ?? defGst());
-    return r2(S.settings.pricesIncludeGst ? net : net / (1 + gst / 100));
+    const gst = gstOf(p);
+    return r2((mrp / (1 + gst / 100)) * (1 - std / 100));
   }
   // The selected customer's saved default discount, so regulars don't need re-entering it on every sale.
   function customerDiscount() {
@@ -798,12 +801,13 @@
   }
   const bizState = () => S.settings.state || "";
   const isIntra = () => !sell.customer.state || !bizState() || sell.customer.state === bizState();
-  function calc(lines, incl, intra) {
+  // Rate is always GST-exclusive: taxable value = qty x rate, less the line discount; GST is added on top as CGST/SGST or IGST.
+  function calc(lines, intra) {
     let taxable = 0, tax = 0;
     const out = lines.map((l) => {
       const g = num(l.gst), disc = Math.min(4, Math.max(0, num(l.discount)));
       const gross = num(l.qty) * num(l.rate) * (1 - disc / 100);
-      const t = r2(incl ? gross / (1 + g / 100) : gross), tx = r2(t * g / 100);
+      const t = r2(gross), tx = r2(t * g / 100);
       taxable += t; tax += tx;
       return Object.assign({}, l, { discount: disc, taxable: t, tax: tx, amount: r2(t + tx) });
     });
@@ -812,7 +816,7 @@
     return { lines: out, totals: { taxable, cgst: intra ? r2(tax / 2) : 0, sgst: intra ? r2(tax - r2(tax / 2)) : 0, igst: intra ? 0 : tax, tax, roundOff: r2(total - sub), total } };
   }
   function draftInvoiceLines() {
-    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", uqc: p.uqc || uqcFor(p.unit), qty: sellCount(l), rate: num(l.rate), discount: Math.min(4, Math.max(0, num(l.discount))), gst: num(p.gst ?? defGst()), serials: p.serialized ? l.serials.slice() : [] }; });
+    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", uqc: p.uqc || uqcFor(p.unit), qty: sellCount(l), rate: num(l.rate), discount: Math.min(4, Math.max(0, num(l.discount))), gst: gstOf(p), serials: p.serialized ? l.serials.slice() : [] }; });
   }
   function renderSell() {
     activeHint("sell", sell.active, () => { sell.active = null; saveSell(); renderSell(); $("sell-scan").focus(); });
@@ -821,7 +825,7 @@
       const p = prod(l.pid), got = sellCount(l), ord = num(l.ordered);
       const status = !ord ? (got ? `<span class="pill neutral">${got} loaded</span>` : `<span class="pill neutral">Not loaded yet</span>`) : got === ord ? `<span class="pill ok">✓ All ${ord} loaded</span>` : got < ord ? `<span class="pill warn">${got} of ${ord} loaded</span>` : `<span class="pill err">${got - ord} over order</span>`;
       return `<div class="line ${sell.active === l.pid ? "is-active" : ""}" data-pid="${esc(l.pid)}">
-        <div class="line-top"><div class="grow"><div class="p-name">${esc(p.name)}</div><div class="p-meta"><code>${esc(p.code)}</code> · ${f0.format(Math.max(0, qtyOf(p.id)))} in stock · GST ${num(p.gst ?? defGst())}%</div></div>${status}<button type="button" class="icon-btn" data-rm-line aria-label="Remove ${esc(p.name)}">×</button></div>
+        <div class="line-top"><div class="grow"><div class="p-name">${esc(p.name)}</div><div class="p-meta"><code>${esc(p.code)}</code> · ${f0.format(Math.max(0, qtyOf(p.id)))} in stock · GST ${gstOf(p)}%</div></div>${status}<button type="button" class="icon-btn" data-rm-line aria-label="Remove ${esc(p.name)}">×</button></div>
         <div class="line-nums">
           <label class="mini">Ordered<input type="number" min="0" step="1" value="${ord || ""}" placeholder="—" data-ord></label>
           ${p.serialized ? `<div class="mini">Loaded<span class="val">${got}</span></div>` : `<div class="mini">Loaded<span class="stepper"><button type="button" data-step="-1" aria-label="One less">−</button><input type="number" min="0" step="1" value="${got}" data-qty aria-label="Loaded quantity"><button type="button" data-step="1" aria-label="One more">+</button></span></div>`}
@@ -837,8 +841,8 @@
   }
   let sellArmed = false;
   function renderSellTotals() {
-    const intra = isIntra(), incl = !!S.settings.pricesIncludeGst;
-    const c = calc(draftInvoiceLines(), incl, intra), t = c.totals;
+    const intra = isIntra();
+    const c = calc(draftInvoiceLines(), intra), t = c.totals;
     const short = sell.lines.filter((l) => prod(l.pid) && num(l.ordered) && sellCount(l) < num(l.ordered));
     const noRate = c.lines.filter((l) => !l.rate);
     $("sellTotals").innerHTML = `
@@ -910,13 +914,13 @@
     if ((short || noRate) && !sellArmed) { sellArmed = true; $("sellCreate").textContent = "Create anyway"; toast(noRate ? "Some items have no rate. Tap again to create the invoice anyway." : "What's loaded doesn't match the order. Tap again to invoice what's loaded."); return; }
     const date = today(), fy = fyOf(date), prefix = (S.settings.prefix || "INV").trim() || "INV";
     const seq = 1 + S.invoices.filter((i) => i.fy === fy && i.prefix === prefix).reduce((m, i) => Math.max(m, num(i.seq)), 0);
-    const intra = isIntra(), incl = !!S.settings.pricesIncludeGst;
-    const c = calc(lines, incl, intra);
+    const intra = isIntra();
+    const c = calc(lines, intra);
     const seller = {}; ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "bank", "terms"].forEach((k) => seller[k] = S.settings[k] || "");
     const cu = sell.customer;
     const transport = { vehicle: K(cu.vehicle).replace(/[^A-Z0-9]/g, ""), distance: Math.max(0, Math.round(num(cu.distance))), transName: (cu.transName || "").trim(), transId: K(cu.transId) };
     const customer = { name: cu.name.trim(), phone: cu.phone || "", gstin: K(cu.gstin), state: cu.state || "", address: (cu.address || "").trim(), city: (cu.city || "").trim(), pin: (cu.pin || "").trim(), so: cu.so || "", vehicle: transport.vehicle };
-    const doc = { no: `${prefix}/${fy}/${String(seq).padStart(4, "0")}`, prefix, fy, seq, date, createdAt: new Date().toISOString(), customer, transport, seller, intra, pricesIncludeGst: incl, lines: c.lines, totals: c.totals };
+    const doc = { no: `${prefix}/${fy}/${String(seq).padStart(4, "0")}`, prefix, fy, seq, date, createdAt: new Date().toISOString(), customer, transport, seller, intra, lines: c.lines, totals: c.totals };
     if (doc.no.length > 16) { toast("The invoice prefix is too long for e-invoicing. Use up to 5 characters in Settings."); return; }
     $("sellCreate").disabled = true;
     try {
@@ -1651,13 +1655,12 @@
   function fillSettings() {
     const a = document.activeElement; if (a && $("setForm").contains(a) && a.tagName !== "BUTTON") return;
     SF.forEach((k) => ($("s-" + k).value = S.settings[k] ?? ""));
-    $("s-incl").checked = !!S.settings.pricesIncludeGst;
     $("bizName").textContent = S.settings.name || "Pump & Solar Stock";
   }
   $("setForm").addEventListener("submit", async (e) => {
     e.preventDefault(); if (!S.db) return;
     const d = {}; SF.forEach((k) => (d[k] = $("s-" + k).value.trim()));
-    d.gstin = d.gstin.toUpperCase(); d.pricesIncludeGst = $("s-incl").checked; d.stdDiscount = Math.min(100, Math.max(0, num(d.stdDiscount))); d.updatedAt = new Date().toISOString();
+    d.gstin = d.gstin.toUpperCase(); d.stdDiscount = Math.min(100, Math.max(0, num(d.stdDiscount))); d.updatedAt = new Date().toISOString();
     if (d.prefix && !/^[A-Za-z1-9][A-Za-z0-9]{0,4}$/.test(d.prefix)) { toast("Invoice prefix: up to 5 letters or digits, not starting with 0."); return; }
     if (d.gstin && !GSTIN_RE.test(d.gstin)) { toast("GSTIN should be 15 characters."); return; }
     if (d.pin && !/^\d{6}$/.test(d.pin)) { toast("PIN code should be 6 digits."); return; }
