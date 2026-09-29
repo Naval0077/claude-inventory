@@ -207,6 +207,7 @@
   .mini { display: grid; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 600; }
   .mini input { width: 92px; border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 8px; background: var(--surface); font-variant-numeric: tabular-nums; }
   .mini input.rate { width: 120px; }
+  .mini input.disc { width: 76px; }
   .mini .val { font: 600 18px/32px var(--display); color: var(--text); font-variant-numeric: tabular-nums; }
   .stepper { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
   .stepper button { width: 32px; border: 0; background: var(--surface-2); cursor: pointer; font-size: 17px; color: var(--muted); }

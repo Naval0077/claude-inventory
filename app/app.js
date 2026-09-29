@@ -735,9 +735,30 @@
   };
 
   // ---------- SELL ----------
+  // Default rate when a product has no saved selling price: strip GST out of MRP
+  // (or use MRP as-is if this business's prices already include GST).
+  function defaultRate(p) {
+    if (num(p.price)) return num(p.price);
+    const mrp = num(p.mrp); if (!mrp) return 0;
+    const std = Math.min(100, Math.max(0, num(S.settings.stdDiscount)));
+    const net = mrp * (1 - std / 100);
+    const gst = num(p.gst ?? defGst());
+    return r2(S.settings.pricesIncludeGst ? net : net / (1 + gst / 100));
+  }
+  // The selected customer's saved default discount, so regulars don't need re-entering it on every sale.
+  function customerDiscount() {
+    const p = sell.partyId && S.parties.find((x) => x.id === sell.partyId);
+    return p ? Math.min(4, Math.max(0, num(p.discount))) : 0;
+  }
+  function applyCustomerDiscount() {
+    const d = customerDiscount(); if (!d) return;
+    let changed = false;
+    sell.lines.forEach((l) => { if (!num(l.discount)) { l.discount = d; changed = true; } });
+    if (changed) { saveSell(); renderSell(); }
+  }
   function sellLine(pid) {
     let l = sell.lines.find((x) => x.pid === pid);
-    if (!l) { const p = prod(pid); l = { pid, ordered: 0, qty: 0, serials: [], rate: num(p.price) }; sell.lines.unshift(l); }
+    if (!l) { const p = prod(pid); l = { pid, ordered: 0, qty: 0, serials: [], rate: defaultRate(p), discount: customerDiscount() }; sell.lines.unshift(l); }
     return l;
   }
   const sellCount = (l) => { const p = prod(l.pid); return p && p.serialized ? l.serials.length : num(l.qty); };
@@ -780,17 +801,18 @@
   function calc(lines, incl, intra) {
     let taxable = 0, tax = 0;
     const out = lines.map((l) => {
-      const g = num(l.gst), gross = num(l.qty) * num(l.rate);
+      const g = num(l.gst), disc = Math.min(4, Math.max(0, num(l.discount)));
+      const gross = num(l.qty) * num(l.rate) * (1 - disc / 100);
       const t = r2(incl ? gross / (1 + g / 100) : gross), tx = r2(t * g / 100);
       taxable += t; tax += tx;
-      return Object.assign({}, l, { taxable: t, tax: tx, amount: r2(t + tx) });
+      return Object.assign({}, l, { discount: disc, taxable: t, tax: tx, amount: r2(t + tx) });
     });
     taxable = r2(taxable); tax = r2(tax);
     const sub = r2(taxable + tax), total = Math.round(sub);
     return { lines: out, totals: { taxable, cgst: intra ? r2(tax / 2) : 0, sgst: intra ? r2(tax - r2(tax / 2)) : 0, igst: intra ? 0 : tax, tax, roundOff: r2(total - sub), total } };
   }
   function draftInvoiceLines() {
-    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", uqc: p.uqc || uqcFor(p.unit), qty: sellCount(l), rate: num(l.rate), gst: num(p.gst ?? defGst()), serials: p.serialized ? l.serials.slice() : [] }; });
+    return sell.lines.filter((l) => prod(l.pid) && sellCount(l) > 0).map((l) => { const p = prod(l.pid); return { pid: l.pid, code: p.code || "", name: p.name, rating: p.rating || "", hsn: p.hsn || "", unit: p.unit || "pcs", uqc: p.uqc || uqcFor(p.unit), qty: sellCount(l), rate: num(l.rate), discount: Math.min(4, Math.max(0, num(l.discount))), gst: num(p.gst ?? defGst()), serials: p.serialized ? l.serials.slice() : [] }; });
   }
   function renderSell() {
     activeHint("sell", sell.active, () => { sell.active = null; saveSell(); renderSell(); $("sell-scan").focus(); });
@@ -804,7 +826,8 @@
           <label class="mini">Ordered<input type="number" min="0" step="1" value="${ord || ""}" placeholder="—" data-ord></label>
           ${p.serialized ? `<div class="mini">Loaded<span class="val">${got}</span></div>` : `<div class="mini">Loaded<span class="stepper"><button type="button" data-step="-1" aria-label="One less">−</button><input type="number" min="0" step="1" value="${got}" data-qty aria-label="Loaded quantity"><button type="button" data-step="1" aria-label="One more">+</button></span></div>`}
           <label class="mini">Rate (₹)<input class="rate" type="number" min="0" step="0.01" value="${num(l.rate)}" data-rate></label>
-          <div class="mini">Amount<span class="val" data-amt>${rs2(got * num(l.rate))}</span></div>
+          <label class="mini">Discount %<input class="disc" type="number" min="0" max="4" step="0.01" value="${num(l.discount) || 0}" data-disc></label>
+          <div class="mini">Amount<span class="val" data-amt>${rs2(got * num(l.rate) * (1 - Math.min(4, Math.max(0, num(l.discount))) / 100))}</span></div>
           ${p.serialized && sell.active !== l.pid ? `<button type="button" class="btn" data-activate style="padding:6px 12px">Scan serials</button>` : ""}
         </div>
         ${l.serials.length ? `<div class="serials">${l.serials.map((s, i) => `<span class="sn">${esc(s)}<button type="button" data-rm-sn="${i}" aria-label="Remove serial ${esc(s)}">×</button></span>`).join("")}</div>` : ""}
@@ -851,7 +874,11 @@
   $("sellLines").addEventListener("input", (e) => {
     const line = e.target.closest(".line"); if (!line) return;
     const l = sell.lines.find((x) => x.pid === line.dataset.pid); if (!l) return;
-    if (e.target.matches("[data-rate]")) { l.rate = Math.max(0, num(e.target.value)); line.querySelector("[data-amt]").textContent = rs2(sellCount(l) * l.rate); saveSell(); renderSellTotals(); }
+    if (e.target.matches("[data-rate]")) l.rate = Math.max(0, num(e.target.value));
+    else if (e.target.matches("[data-disc]")) l.discount = Math.min(4, Math.max(0, num(e.target.value)));
+    else return;
+    line.querySelector("[data-amt]").textContent = rs2(sellCount(l) * l.rate * (1 - num(l.discount) / 100));
+    saveSell(); renderSellTotals();
   });
   $("sellLines").addEventListener("change", (e) => {
     const line = e.target.closest(".line"); if (!line) return;
@@ -967,14 +994,17 @@
     const clean = (v, max) => String(v || "").replace(/\s+/g, " ").trim().slice(0, max);
     const phone = (v) => { const d = String(v || "").replace(/\D/g, "").slice(-12); return d.length >= 6 ? d : undefined; };
     const buyerSt = stateCode(c.state || stateFromGstin(c.gstin));
-    let ass = 0, cg = 0, sg = 0, ig = 0;
+    let ass = 0, cg = 0, sg = 0, ig = 0, discTotal = 0;
     const items = (inv.lines || []).map((l, i) => {
       const qty = num(l.qty), a = r2(num(l.taxable)), tax = r2(num(l.tax));
+      const discPct = Math.min(4, Math.max(0, num(l.discount)));
+      const preDisc = discPct ? r2(a / (1 - discPct / 100)) : a;
+      const discAmt = r2(preDisc - a);
       const lc = intra ? r2(tax / 2) : 0, ls = intra ? r2(tax - lc) : 0, li = intra ? 0 : tax;
-      ass += a; cg += lc; sg += ls; ig += li;
-      return { SlNo: String(i + 1), PrdDesc: clean(l.name + (l.rating && !String(l.name).includes(l.rating) ? " " + l.rating : ""), 300), IsServc: "N", HsnCd: String(l.hsn || ""), Qty: qty, Unit: l.uqc || uqcFor(l.unit), UnitPrice: qty ? Math.round((a / qty) * 1000) / 1000 : 0, TotAmt: a, Discount: 0, AssAmt: a, GstRt: num(l.gst), IgstAmt: li, CgstAmt: lc, SgstAmt: ls, CesRt: 0, CesAmt: 0, CesNonAdvlAmt: 0, StateCesRt: 0, StateCesAmt: 0, StateCesNonAdvlAmt: 0, OthChrg: 0, TotItemVal: r2(a + tax) };
+      ass += a; cg += lc; sg += ls; ig += li; discTotal += discAmt;
+      return { SlNo: String(i + 1), PrdDesc: clean(l.name + (l.rating && !String(l.name).includes(l.rating) ? " " + l.rating : ""), 300), IsServc: "N", HsnCd: String(l.hsn || ""), Qty: qty, Unit: l.uqc || uqcFor(l.unit), UnitPrice: qty ? Math.round((preDisc / qty) * 1000) / 1000 : 0, TotAmt: preDisc, Discount: discAmt, AssAmt: a, GstRt: num(l.gst), IgstAmt: li, CgstAmt: lc, SgstAmt: ls, CesRt: 0, CesAmt: 0, CesNonAdvlAmt: 0, StateCesRt: 0, StateCesAmt: 0, StateCesNonAdvlAmt: 0, OthChrg: 0, TotItemVal: r2(a + tax) };
     });
-    ass = r2(ass); cg = r2(cg); sg = r2(sg); ig = r2(ig);
+    ass = r2(ass); cg = r2(cg); sg = r2(sg); ig = r2(ig); discTotal = r2(discTotal);
     const total = num(inv.totals && inv.totals.total) || Math.round(ass + cg + sg + ig);
     const p = {
       Version: "1.1",
@@ -983,7 +1013,7 @@
       SellerDtls: { Gstin: K(s.gstin), LglNm: clean(s.name, 100), Addr1: clean(s.address, 100), Loc: clean(s.city, 50), Pin: num(s.pin), Stcd: stateCode(s.state), Ph: phone(s.phone), Em: s.email ? clean(s.email, 100) : undefined },
       BuyerDtls: { Gstin: K(c.gstin), LglNm: clean(c.name, 100), Pos: buyerSt, Addr1: clean(c.address, 100), Loc: clean(c.city, 50), Pin: num(c.pin), Stcd: buyerSt, Ph: phone(c.phone) },
       ItemList: items,
-      ValDtls: { AssVal: ass, CgstVal: cg, SgstVal: sg, IgstVal: ig, CesVal: 0, StCesVal: 0, Discount: 0, OthChrg: 0, RndOffAmt: r2(total - (ass + cg + sg + ig)), TotInvVal: total },
+      ValDtls: { AssVal: ass, CgstVal: cg, SgstVal: sg, IgstVal: ig, CesVal: 0, StCesVal: 0, Discount: discTotal, OthChrg: 0, RndOffAmt: r2(total - (ass + cg + sg + ig)), TotInvVal: total },
     };
     if (tr.vehicle || tr.transId) p.EwbDtls = { TransId: tr.transId || undefined, TransName: tr.transName ? clean(tr.transName, 100) : undefined, Distance: Math.round(num(tr.distance)), TransMode: tr.vehicle ? "1" : undefined, VehNo: tr.vehicle || undefined, VehType: tr.vehicle ? "R" : undefined };
     return p;
@@ -1054,6 +1084,7 @@
   // ---------- Invoice view + PDF ----------
   function invoiceHtml(inv) {
     const s = sellerOf(inv), c = inv.customer || {}, t = inv.totals || {}, e = inv.einv || {};
+    const hasDisc = (inv.lines || []).some((l) => num(l.discount) > 0);
     return `<div class="paper-wrap"><div class="paper" style="min-width:560px">
       <div class="top">
         <div><h4>${esc(s.name || "Your business name")}</h4><div class="muted" style="white-space:pre-line">${esc([s.address, [s.city, s.pin].filter(Boolean).join(" - ")].filter(Boolean).join("\n"))}</div>
@@ -1063,8 +1094,8 @@
       ${e.irn ? `<div style="display:flex;gap:14px;align-items:center;border:1px solid var(--paper-line);border-radius:8px;padding:10px"><img id="irnQr" alt="Signed e-invoice QR code" style="width:96px;height:96px;flex:none;background:#fff"><div style="min-width:0;font-size:12px"><div><b>IRN</b> <span style="font-family:var(--mono);word-break:break-all">${esc(e.irn)}</span></div><div class="muted">Ack no. ${esc(e.ackNo || "—")} · Ack date ${esc(e.ackDt || "—")}</div></div></div>` : ""}
       <div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Bill to</div><b>${esc(c.name)}</b><div class="muted" style="white-space:pre-line">${esc([c.address, [c.city, c.pin].filter(Boolean).join(" - ")].filter(Boolean).join("\n"))}</div>
         <div class="muted">${c.gstin ? "GSTIN " + esc(c.gstin) + " · " : ""}${c.phone ? esc(c.phone) + " · " : ""}Place of supply: ${esc(c.state || s.state || "—")}</div></div>
-      <table><thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Amount</th></tr></thead>
-      <tbody>${(inv.lines || []).map((l, i) => `<tr><td>${i + 1}</td><td><b>${esc(l.name)}</b><div class="muted">${esc(l.code)}${l.rating ? " · " + esc(l.rating) : ""}</div>${l.serials && l.serials.length ? `<div class="sns">S/N: ${l.serials.map(esc).join(", ")}</div>` : ""}</td><td>${esc(l.hsn || "")}</td><td class="num">${l.qty} ${esc(l.unit || "")}</td><td class="num">${f2.format(l.rate)}</td><td class="num">${f2.format(l.taxable)}</td><td class="num">${l.gst}%<div class="muted">${f2.format(l.tax)}</div></td><td class="num">${f2.format(l.amount)}</td></tr>`).join("")}</tbody></table>
+      <table><thead><tr><th>#</th><th>Item</th><th>HSN</th><th class="num">Qty</th><th class="num">Rate</th>${hasDisc ? `<th class="num">Disc %</th>` : ""}<th class="num">Taxable</th><th class="num">GST</th><th class="num">Amount</th></tr></thead>
+      <tbody>${(inv.lines || []).map((l, i) => `<tr><td>${i + 1}</td><td><b>${esc(l.name)}</b><div class="muted">${esc(l.code)}${l.rating ? " · " + esc(l.rating) : ""}</div>${l.serials && l.serials.length ? `<div class="sns">S/N: ${l.serials.map(esc).join(", ")}</div>` : ""}</td><td>${esc(l.hsn || "")}</td><td class="num">${l.qty} ${esc(l.unit || "")}</td><td class="num">${f2.format(l.rate)}</td>${hasDisc ? `<td class="num">${num(l.discount) ? f2.format(l.discount) + "%" : "—"}</td>` : ""}<td class="num">${f2.format(l.taxable)}</td><td class="num">${l.gst}%<div class="muted">${f2.format(l.tax)}</div></td><td class="num">${f2.format(l.amount)}</td></tr>`).join("")}</tbody></table>
       <div class="sum">
         <div><span class="muted">Taxable value</span><span>${rs2(t.taxable || 0)}</span></div>
         ${inv.intra ? `<div><span class="muted">CGST</span><span>${rs2(t.cgst || 0)}</span></div><div><span class="muted">SGST</span><span>${rs2(t.sgst || 0)}</span></div>` : `<div><span class="muted">IGST</span><span>${rs2(t.igst || 0)}</span></div>`}
@@ -1135,11 +1166,21 @@
     const payStrip = `<div class="row" style="justify-content:space-between"><div class="row">${pst ? payPill(pst) : ""}${pst && pst.paid > 0.5 && pst.left > 0.5 ? `<span class="muted small">${rs(pst.paid)} received</span>` : ""}</div><div class="row">${pid ? `<button type="button" class="btn ghost" id="invParty">Customer statement</button>` : ""}${pid && S.canWrite && (!pst || pst.left > 0.5) ? `<button type="button" class="btn" id="invPay">Record payment</button>` : ""}</div></div>`;
     $("vBody").innerHTML = payStrip + einvPanel(inv) + invoiceHtml(inv) + (!(sellerOf(inv).name) ? `<p class="pill warn">Add your business name and GSTIN in Settings so they print on invoices.</p>` : "");
     const e = inv.einv || {};
-    $("vFoot").innerHTML = `<span class="muted small">${e.ewbNo ? "PDF includes the e-way bill on page 2" : `${(inv.lines || []).reduce((a, l) => a + (l.serials || []).length, 0)} serial numbers recorded`}</span><div class="row"><button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="vPdf">Download PDF</button></div>`;
+    $("vFoot").innerHTML = `<span class="muted small">${e.ewbNo ? "PDF includes the e-way bill on page 2" : `${(inv.lines || []).reduce((a, l) => a + (l.serials || []).length, 0)} serial numbers recorded`}</span><div class="row">${can("sell") && S.canWrite ? `<button type="button" class="btn danger" id="invDelete">Delete invoice</button>` : ""}<button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="vPdf">Download PDF</button></div>`;
     $("vPdf").onclick = () => invoicePdf(inv);
     if (e.qr) qrDataUrl(e.qr).then((u) => { const im = $("irnQr"); if (im) im.src = u; }).catch(() => {});
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
     on("eiDownload", () => downloadEinv([inv]));
+    on("invDelete", async () => {
+      const b = $("invDelete");
+      if (!b.classList.contains("armed")) {
+        b.classList.add("armed");
+        b.textContent = pst && pst.paid > 0.5 ? "Payments are recorded — delete anyway?" : "Yes, delete this invoice";
+        return;
+      }
+      try { await col("invoices").doc(inv.id).delete(); toast(`Deleted ${inv.no} · stock added back`); $("vDlg").close(); }
+      catch (x) { writeFailed(x); }
+    });
     on("invPay", () => openPayment(pid, inv.id));
     on("invParty", () => showParty(pid));
     on("eiImport", () => pickFile(".json,.xlsx,.xls,.csv", (f) => importResults(f, inv)));
@@ -1204,7 +1245,10 @@
     doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(pdfText(c.name), M, y); doc.setFont("helvetica", "normal"); doc.setFontSize(9); y += 4.5;
     doc.splitTextToSize(pdfText([c.address, [c.city, c.pin].filter(Boolean).join(" - ")].filter(Boolean).join(", ")), 120).forEach((ln) => { doc.text(ln, M, y); y += 4.2; });
     doc.text(pdfText([c.gstin ? "GSTIN " + c.gstin : "", c.phone, "Place of supply: " + (c.state || s.state || "-")].filter(Boolean).join("  |  ")), M, y); y += 7;
-    const cols = [{ h: "#", w: 8 }, { h: "Item", w: 66 }, { h: "HSN", w: 16 }, { h: "Qty", w: 14, r: 1 }, { h: "Rate", w: 22, r: 1 }, { h: "Taxable", w: 22, r: 1 }, { h: "GST", w: 14, r: 1 }, { h: "Amount", w: 20, r: 1 }];
+    const hasDisc = (inv.lines || []).some((l) => num(l.discount) > 0);
+    const cols = hasDisc
+      ? [{ h: "#", w: 8 }, { h: "Item", w: 58 }, { h: "HSN", w: 14 }, { h: "Qty", w: 12, r: 1 }, { h: "Rate", w: 20, r: 1 }, { h: "Disc%", w: 12, r: 1 }, { h: "Taxable", w: 20, r: 1 }, { h: "GST", w: 14, r: 1 }, { h: "Amount", w: 24, r: 1 }]
+      : [{ h: "#", w: 8 }, { h: "Item", w: 66 }, { h: "HSN", w: 16 }, { h: "Qty", w: 14, r: 1 }, { h: "Rate", w: 22, r: 1 }, { h: "Taxable", w: 22, r: 1 }, { h: "GST", w: 14, r: 1 }, { h: "Amount", w: 20, r: 1 }];
     const head = () => { doc.setFillColor(238, 243, 244); doc.rect(M, y - 4, W - 2 * M, 7, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); let x = M; cols.forEach((cl) => { doc.text(cl.h, cl.r ? x + cl.w - 1.5 : x + 1.5, y + 0.5, cl.r ? { align: "right" } : undefined); x += cl.w; }); doc.setFont("helvetica", "normal"); y += 6; };
     head();
     (inv.lines || []).forEach((l, i) => {
@@ -1215,7 +1259,9 @@
       const snL = l.serials && l.serials.length ? doc.splitTextToSize(pdfText("S/N: " + l.serials.join(", ")), cols[1].w - 3) : [];
       const hgt = nameL.length * 4 + subL.length * 3.6 + snL.length * 3.3 + 3;
       if (y + hgt > 272) { doc.addPage(); y = M + 6; head(); }
-      let x = M; const vals = [String(i + 1), null, pdfText(l.hsn || ""), `${l.qty} ${pdfText(l.unit || "")}`, money(l.rate), money(l.taxable), `${l.gst}%`, money(l.amount)];
+      let x = M; const vals = hasDisc
+        ? [String(i + 1), null, pdfText(l.hsn || ""), `${l.qty} ${pdfText(l.unit || "")}`, money(l.rate), num(l.discount) ? f2.format(l.discount) + "%" : "-", money(l.taxable), `${l.gst}%`, money(l.amount)]
+        : [String(i + 1), null, pdfText(l.hsn || ""), `${l.qty} ${pdfText(l.unit || "")}`, money(l.rate), money(l.taxable), `${l.gst}%`, money(l.amount)];
       doc.setFontSize(9);
       cols.forEach((cl, j) => {
         if (j === 1) {
@@ -1307,10 +1353,21 @@
       ${(l.serials || []).length ? `<div class="serials">${l.serials.map((s) => `<span class="sn plain">${esc(s)}</span>`).join("")}</div>` : ""}</div>`).join("")}</div>
       ${r.notes ? `<p class="muted">${esc(r.notes)}</p>` : ""}`;
     if (num(r.billAmount) || spid) $("vBody").insertAdjacentHTML("afterbegin", `<div class="row" style="justify-content:space-between"><div class="row">${num(r.billAmount) ? `<span class="small">Bill amount <b>${rs2(num(r.billAmount))}</b></span> ${payPill(bst)}` : `<span class="muted small">No bill amount entered</span>`}</div><div class="row">${spid ? `<button type="button" class="btn ghost" id="rcParty">Supplier statement</button>` : ""}${spid && S.canWrite && bst && bst.left > 0.5 ? `<button type="button" class="btn" id="rcPay">Record payment</button>` : ""}</div></div>`);
-    $("vFoot").innerHTML = `<span class="muted small">${sns.length ? `Labels encode product code and serial, so one scan at dispatch finds both.` : ""}</span><div class="row"><button type="button" class="btn" data-close>Close</button>${sns.length ? `<button type="button" class="btn primary" id="vLabels">Download ${sns.length} serial labels</button>` : ""}</div>`;
+    $("vFoot").innerHTML = `<span class="muted small">${sns.length ? `Labels encode product code and serial, so one scan at dispatch finds both.` : ""}</span><div class="row">${can("receive") && S.canWrite ? `<button type="button" class="btn danger" id="grnDelete">Delete this receipt</button>` : ""}<button type="button" class="btn" data-close>Close</button>${sns.length ? `<button type="button" class="btn primary" id="vLabels">Download ${sns.length} serial labels</button>` : ""}</div>`;
     const lb = $("vLabels"); if (lb) lb.onclick = () => labelsPdf(sns, `labels-${r.no}.pdf`);
     if ($("rcParty")) $("rcParty").onclick = () => showParty(spid);
     if ($("rcPay")) $("rcPay").onclick = () => openPayment(spid, r.id);
+    const gd = $("grnDelete");
+    if (gd) gd.onclick = async () => {
+      if (!gd.classList.contains("armed")) {
+        gd.classList.add("armed");
+        const sold = (r.lines || []).some((l) => (l.serials || []).some((sn) => { const e = serialIdx.get(K(sn)); return e && e.st === "sold"; }));
+        gd.textContent = bst && bst.paid > 0.5 ? "A bill payment is recorded — delete anyway?" : sold ? "Some units are already sold — delete anyway?" : "Yes, delete this receipt";
+        return;
+      }
+      try { await col("receipts").doc(r.id).delete(); toast(`Deleted ${r.no} · stock updated`); $("vDlg").close(); }
+      catch (x) { writeFailed(x); }
+    };
     if (!$("vDlg").open) $("vDlg").showModal();
   }
 
@@ -1426,7 +1483,7 @@
     e._rows = rows;
     $("vBody").innerHTML = `
       <div class="kv"><div><b>${rs(e.billed)}</b><span>${cust ? "Invoiced" : "Billed"}</span></div><div><b>${rs(e.paid)}</b><span>${cust ? "Received" : "Paid"}</span></div><div><b style="color:${e.overdue > 0.5 ? "var(--crit)" : "inherit"}">${e.due < -0.5 ? rs(-e.due) + " adv." : rs(Math.max(0, e.due))}</b><span>${e.overdue > 0.5 ? rs(e.overdue) + " overdue" : cust ? "Still to receive" : "Still to pay"}</span></div></div>
-      <div class="row small muted">${esc([p.contact, p.phone, p.email].filter(Boolean).join(" · "))}${p.address || p.city ? `<span>${esc([p.address, p.city, p.state, p.pin].filter(Boolean).join(", "))}</span>` : ""}<span>Credit period ${p.creditDays === "" || p.creditDays == null ? 30 : num(p.creditDays)} days</span></div>
+      <div class="row small muted">${esc([p.contact, p.phone, p.email].filter(Boolean).join(" · "))}${p.address || p.city ? `<span>${esc([p.address, p.city, p.state, p.pin].filter(Boolean).join(", "))}</span>` : ""}<span>Credit period ${p.creditDays === "" || p.creditDays == null ? 30 : num(p.creditDays)} days</span>${cust && num(p.discount) ? `<span>Default discount ${num(p.discount)}%</span>` : ""}</div>
       ${p.notes ? `<p class="small">${esc(p.notes)}</p>` : ""}
       <div class="row">
         ${S.canWrite ? `<button type="button" class="btn primary" id="ptPay">${cust ? "Record payment received" : "Record payment made"}</button>` : ""}
@@ -1460,10 +1517,10 @@
   }
   function startSaleFor(p) {
     sell.customer = Object.assign(freshSell().customer, { name: p.name, phone: p.phone || "", gstin: p.gstin || "", state: p.state || "", address: p.address || "", city: p.city || "", pin: p.pin || "" });
-    sell.partyId = p.id; saveSell(); fillSellForm(); setView("sell"); custHint();
+    sell.partyId = p.id; saveSell(); fillSellForm(); setView("sell"); custHint(); applyCustomerDiscount();
   }
 
-  const PTF = ["name", "type", "contact", "phone", "email", "gstin", "state", "address", "city", "pin", "creditDays", "openingBalance", "notes"];
+  const PTF = ["name", "type", "contact", "phone", "email", "gstin", "state", "address", "city", "pin", "creditDays", "openingBalance", "discount", "notes"];
   let ptEditing = null;
   function openPartyEdit(id, type, preset) {
     ptEditing = id || null;
@@ -1481,7 +1538,7 @@
   $("ptForm").addEventListener("submit", async (ev) => {
     ev.preventDefault(); if (!S.db) return;
     const d = {}; PTF.forEach((k) => (d[k] = $("pt-" + k).value.trim()));
-    d.gstin = K(d.gstin); d.creditDays = d.creditDays === "" ? 30 : Math.max(0, Math.round(num(d.creditDays))); d.openingBalance = num(d.openingBalance);
+    d.gstin = K(d.gstin); d.creditDays = d.creditDays === "" ? 30 : Math.max(0, Math.round(num(d.creditDays))); d.openingBalance = num(d.openingBalance); d.discount = Math.min(4, Math.max(0, num(d.discount)));
     const err = (m) => { $("ptErr").textContent = m; $("ptErr").hidden = false; };
     if (!d.name) return err("Add a name.");
     if (d.gstin && !GSTIN_RE.test(d.gstin)) return err("GSTIN should be 15 characters.");
@@ -1549,7 +1606,7 @@
   }
   $("c-name").addEventListener("change", () => {
     const id = matchParty("customer", null, "", sell.customer.name), p = id && S.parties.find((x) => x.id === id);
-    if (p) { sell.customer = Object.assign({}, sell.customer, { name: p.name, phone: p.phone || sell.customer.phone, gstin: p.gstin || sell.customer.gstin, state: p.state || sell.customer.state, address: p.address || sell.customer.address, city: p.city || sell.customer.city, pin: p.pin || sell.customer.pin }); sell.partyId = p.id; saveSell(); fillSellForm(); renderSellTotals(); }
+    if (p) { sell.customer = Object.assign({}, sell.customer, { name: p.name, phone: p.phone || sell.customer.phone, gstin: p.gstin || sell.customer.gstin, state: p.state || sell.customer.state, address: p.address || sell.customer.address, city: p.city || sell.customer.city, pin: p.pin || sell.customer.pin }); sell.partyId = p.id; saveSell(); fillSellForm(); renderSellTotals(); applyCustomerDiscount(); }
     else sell.partyId = null;
     custHint();
   });
@@ -1590,7 +1647,7 @@
   });
 
   // ---------- SETTINGS ----------
-  const SF = ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "prefix", "gst", "bank", "terms"];
+  const SF = ["name", "address", "city", "pin", "gstin", "state", "phone", "email", "prefix", "gst", "stdDiscount", "bank", "terms"];
   function fillSettings() {
     const a = document.activeElement; if (a && $("setForm").contains(a) && a.tagName !== "BUTTON") return;
     SF.forEach((k) => ($("s-" + k).value = S.settings[k] ?? ""));
@@ -1600,7 +1657,7 @@
   $("setForm").addEventListener("submit", async (e) => {
     e.preventDefault(); if (!S.db) return;
     const d = {}; SF.forEach((k) => (d[k] = $("s-" + k).value.trim()));
-    d.gstin = d.gstin.toUpperCase(); d.pricesIncludeGst = $("s-incl").checked; d.updatedAt = new Date().toISOString();
+    d.gstin = d.gstin.toUpperCase(); d.pricesIncludeGst = $("s-incl").checked; d.stdDiscount = Math.min(100, Math.max(0, num(d.stdDiscount))); d.updatedAt = new Date().toISOString();
     if (d.prefix && !/^[A-Za-z1-9][A-Za-z0-9]{0,4}$/.test(d.prefix)) { toast("Invoice prefix: up to 5 letters or digits, not starting with 0."); return; }
     if (d.gstin && !GSTIN_RE.test(d.gstin)) { toast("GSTIN should be 15 characters."); return; }
     if (d.pin && !/^\d{6}$/.test(d.pin)) { toast("PIN code should be 6 digits."); return; }
