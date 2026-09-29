@@ -838,10 +838,10 @@
         feedback(prefix, "info", "Reading barcode from photo…");
         try {
           const codes = await decodePhoto(f, (i, n) => { if (i > 1) feedback(prefix, "info", `Reading barcode from photo… (looking closer, ${i} of ${n})`); }, (t) => !!(parseScan(t).pid || serialIdx.has(K(t))));
-          if (!codes.length) { feedback(prefix, "err", "No barcode found in that photo. Fill most of the photo with the barcode, keep it flat, sharp and without glare, and try again. You can also type the number in the scan box."); beep(false); return; }
+          if (!codes.length) { feedback(prefix, "err", `No barcode found in that photo. Fill most of the photo with the barcode, keep it flat, sharp and without glare, and try again. You can also type the number in the scan box.<br><small style="opacity:.75">${esc(lastScanInfo)}</small>`); beep(false); return; }
           codes.sort((a, b) => (lookupCode(b) ? 1 : 0) - (lookupCode(a) ? 1 : 0));
           codes.forEach((c) => handler(c));
-        } catch (e) { feedback(prefix, "err", e.message || "Couldn't read that photo."); }
+        } catch (e) { feedback(prefix, "err", `Couldn't read that photo: ${esc(e && e.message ? e.message : String(e))}<br><small style="opacity:.75">${esc(lastScanInfo)}</small>`); }
       };
       pi.click();
     });
@@ -867,43 +867,72 @@
   // downscaled, turned 90°, and centre crops, with two binarizers. The phone's own detector is tried first where it exists.
   async function loadPhoto(file) {
     try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) {}
+    try { return await createImageBitmap(file); } catch (e) {}
     const url = URL.createObjectURL(file);
     try { return await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("Couldn't open that photo. Take it again, or choose a JPEG or PNG.")); im.src = url; }); }
     finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
   }
+  // iPhone Safari caps each canvas at 16.7 M pixels and all canvases together at a few hundred MB, and 24 MP photos
+  // blow through both. So: copy the photo once into a base canvas of at most 4096 px, free the original, and reuse
+  // one scratch canvas (at most 3600 px) for every attempt; release both when the scan ends.
+  const BASE_MAX = 4096, WORK_MAX = 3600;
+  let baseCv = null, workCv = null;
+  function ctx2d(cv) { const g = cv.getContext("2d", { willReadFrequently: true }); if (!g) throw new Error("The phone ran out of memory for this photo"); return g; }
+  function makeBase(img) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, k = Math.min(1, BASE_MAX / Math.max(iw, ih));
+    baseCv = baseCv || document.createElement("canvas");
+    baseCv.width = Math.max(1, Math.round(iw * k)); baseCv.height = Math.max(1, Math.round(ih * k));
+    const g = ctx2d(baseCv); g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, baseCv.width, baseCv.height);
+    if (img.close) img.close();
+    return baseCv;
+  }
+  function releaseCanvases() { [baseCv, workCv].forEach((c) => { if (c) { c.width = 0; c.height = 0; } }); }
+  function workCtx(w, h) { workCv = workCv || document.createElement("canvas"); workCv.width = w; workCv.height = h; return ctx2d(workCv); }
+  function rgbaRegion(src, sx, sy, sw, sh, scale) {
+    const k = Math.min(scale, WORK_MAX / Math.max(sw, sh)), w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
+    const g = workCtx(w, h); g.imageSmoothingQuality = "high"; g.drawImage(src, sx, sy, sw, sh, 0, 0, w, h);
+    return g.getImageData(0, 0, w, h);
+  }
   function grayFrame(img, crop, maxSide, rot) {
-    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const iw = img.width, ih = img.height;
     const cw = iw * crop, ch = ih * crop, sx = (iw - cw) / 2, sy = (ih - ch) / 2;
-    const k = Math.min(1, maxSide / Math.max(cw, ch)), w = Math.max(1, Math.round(cw * k)), h = Math.max(1, Math.round(ch * k));
-    const turn = rot % 180 !== 0, cv = document.createElement("canvas");
-    cv.width = turn ? h : w; cv.height = turn ? w : h;
-    const g = cv.getContext("2d", { willReadFrequently: true });
-    g.translate(cv.width / 2, cv.height / 2); g.rotate((rot * Math.PI) / 180);
+    const k = Math.min(1, Math.min(maxSide, WORK_MAX) / Math.max(cw, ch)), w = Math.max(1, Math.round(cw * k)), h = Math.max(1, Math.round(ch * k));
+    const turn = rot % 180 !== 0, W = turn ? h : w, H = turn ? w : h, g = workCtx(W, H);
+    g.translate(W / 2, H / 2); g.rotate((rot * Math.PI) / 180);
     g.drawImage(img, sx, sy, cw, ch, -w / 2, -h / 2, w, h);
-    const d = g.getImageData(0, 0, cv.width, cv.height).data, out = new Uint8ClampedArray(cv.width * cv.height);
+    const d = g.getImageData(0, 0, W, H).data, out = new Uint8ClampedArray(W * H);
     for (let i = 0, j = 0; j < out.length; i += 4, j++) out[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8;
-    return { out, w: cv.width, h: cv.height };
+    return { out, w: W, h: H };
   }
   // Photo decoding, strongest first: the phone's own detector, then ZXing C++ (WebAssembly, published beside the page),
   // then zxing-js. Retail codes (EAN/UPC…) have weak checksums and misread on tilted or blurry photos, so they are
   // accepted at once only when they match something we know, otherwise only when two different frames agree.
+  let lastScanInfo = "";
   async function decodePhoto(file, onStep, known) {
-    const img = await loadPhoto(file);
-    if ("BarcodeDetector" in window) {
-      try { const r = await new window.BarcodeDetector().detect(img); if (r.length) return [...new Set(r.map((x) => x.rawValue))]; } catch (e) {}
-    }
-    let wasmReady = false;
-    try { await lib("zxw"); await window.ZXingWASM.prepareZXingModule({ overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", document.baseURI).href : prefix + path }, fireImmediately: true }); wasmReady = true; } catch (e) {}
-    if (wasmReady) { try { return await decodeWasm(img, onStep, known); } catch (e) {} }
-    return decodeJs(img, onStep, known);
+    const img = await loadPhoto(file), info = [`photo ${img.naturalWidth || img.width}×${img.naturalHeight || img.height}`];
+    try {
+      if ("BarcodeDetector" in window) {
+        try { const r = await new window.BarcodeDetector().detect(img); if (r.length) return [...new Set(r.map((x) => x.rawValue))]; info.push("built-in reader: none"); } catch (e) { info.push("built-in reader failed"); }
+      }
+      const base = makeBase(img);
+      let wasmReady = false;
+      try { await lib("zxw"); await window.ZXingWASM.prepareZXingModule({ overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", document.baseURI).href : prefix + path }, fireImmediately: true }); wasmReady = true; }
+      catch (e) { info.push("ZXing C++ unavailable: " + (e && e.message ? e.message : e)); }
+      if (wasmReady) {
+        try { const r = await decodeWasm(base, onStep, known); if (r.length) return r; info.push("ZXing C++: none"); }
+        catch (e) { info.push("ZXing C++ error: " + (e && e.message ? e.message : e)); }
+      }
+      try { const r = await decodeJs(base, onStep, known); if (r.length) return r; info.push("zxing-js: none"); }
+      catch (e) { info.push("zxing-js error: " + (e && e.message ? e.message : e)); }
+      return [];
+    } finally { lastScanInfo = info.join(" · "); releaseCanvases(); try { if (img.close) img.close(); } catch (e) {} }
   }
-  async function decodeWasm(img, onStep, known) {
+  async function decodeWasm(base, onStep, known) {
     const Zw = window.ZXingWASM, weak = new Set(["EAN-13", "EAN-8", "UPC-A", "UPC-E", "ITF", "Codabar", "Code39"]);
     const opts = { formats: ["Code128", "EAN-13", "EAN-8", "UPC-A", "UPC-E", "Code39", "Code93", "ITF", "Codabar", "QRCode", "DataMatrix", "PDF417"], tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, maxNumberOfSymbols: 8 };
-    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, big = Math.max(iw, ih);
-    const region = (sx, sy, sw, sh, scale) => { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale)); const g = c.getContext("2d", { willReadFrequently: true }); g.imageSmoothingQuality = "high"; g.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height); return g.getImageData(0, 0, c.width, c.height); };
-    const plan = [() => region(0, 0, iw, ih, Math.min(1, 2400 / big))];
-    for (const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) plan.push(() => region(iw * (fx - 0.3), ih * (fy - 0.3), iw * 0.6, ih * 0.6, (2400 / (big * 0.6)) * 1.6));
+    const iw = base.width, ih = base.height;
+    const plan = [() => rgbaRegion(base, 0, 0, iw, ih, 1)];
+    for (const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) plan.push(() => rgbaRegion(base, iw * (fx - 0.3), ih * (fy - 0.3), iw * 0.6, ih * 0.6, 1.6));
     const seen = new Map(), found = [];
     for (let i = 0; i < plan.length; i++) {
       if (onStep) onStep(i + 1, plan.length);
